@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NexusCode | Professional Software & AI Company</title>
+    <meta
+      name="description"
+      content="NexusCode is a professional technology company delivering software engineering, AI solutions, and secure digital transformation services."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero" id="home">
+      <nav class="nav container">
+        <div class="logo">NexusCode</div>
+        <div class="nav-links">
+          <a href="#services">Services</a>
+          <a href="#about">About</a>
+          <a href="#blogs">Blogs</a>
+          <a href="#chat">Community Chat</a>
+        </div>
+      </nav>
+      <div class="hero-content container">
+        <p class="eyebrow">Professional Technology Partner</p>
+        <h1>We Build Reliable Software, AI Products, and Secure Digital Platforms.</h1>
+        <p>
+          NexusCode helps companies move faster with enterprise-grade engineering,
+          practical AI implementation, and high-performance product delivery.
+        </p>
+        <a href="#chat" class="cta">Join Our Public Chat</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="section container" id="services">
+        <h2>Our Services</h2>
+        <div class="grid three">
+          <article class="card">
+            <h3>Custom Software Development</h3>
+            <p>Web platforms, APIs, and cloud-native systems built for scale and maintainability.</p>
+          </article>
+          <article class="card">
+            <h3>AI & Automation</h3>
+            <p>Applied AI solutions that improve operations, customer experience, and analytics.</p>
+          </article>
+          <article class="card">
+            <h3>Cybersecurity Engineering</h3>
+            <p>Secure-by-design architecture, compliance readiness, and continuous risk reduction.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section section-muted" id="about">
+        <div class="container about-wrap">
+          <div>
+            <h2>About NexusCode</h2>
+            <p>
+              We are a professional company focused on creating digital products that combine
+              design quality, technical excellence, and business impact.
+            </p>
+            <p>
+              Our multidisciplinary teams collaborate with startups, enterprises, and public-sector
+              organizations to deliver modern systems that are fast, secure, and future-ready.
+            </p>
+          </div>
+          <ul class="stats">
+            <li><strong>100+</strong><span>Projects Delivered</span></li>
+            <li><strong>98%</strong><span>Client Satisfaction</span></li>
+            <li><strong>24/7</strong><span>Engineering Support</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section container" id="blogs">
+        <div class="section-header">
+          <h2>Latest Blogs</h2>
+          <p>Insights from our team on software, AI, security, and digital growth.</p>
+        </div>
+        <div id="blog-list" class="grid three"></div>
+      </section>
+
+      <section class="section section-muted" id="chat">
+        <div class="container chat-wrap">
+          <div class="section-header">
+            <h2>Public Community Chat</h2>
+            <p>Anyone can join the conversation, ask questions, and connect with others in real time.</p>
+          </div>
+
+          <form id="chat-form" class="chat-form">
+            <input id="name-input" type="text" maxlength="24" placeholder="Your name (optional)" />
+            <input id="message-input" type="text" maxlength="600" placeholder="Type your message..." required />
+            <button type="submit">Send</button>
+          </form>
+
+          <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <p>© 2026 NexusCode. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
