@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusCodex | NexusOS</title>
+  <meta name="description" content="NexusCodex is the parent company of NexusOS, a modern Linux distribution focused on performance, security, and open-source ethics." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular']
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    html { scroll-behavior: smooth; }
+    body { background: radial-gradient(circle at 0% 0%, #13203b 0%, #070b16 55%); }
+    .glass { background: rgba(15, 22, 43, 0.72); backdrop-filter: blur(10px); }
+    .border-glow { border: 1px solid rgba(96,165,250,.3); box-shadow: 0 0 24px rgba(59,130,246,.12); }
+    .terminal-caret::after { content: '_'; animation: blink 1s infinite; }
+    @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  </style>
+</head>
+<body class="text-slate-100 font-sans">
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 glass">
+    <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="font-bold tracking-wide">NexusCodex</div>
+      <div class="flex gap-5 text-sm text-slate-300">
+        <a class="hover:text-blue-300 transition" href="#nexusos">NexusOS</a>
+        <a class="hover:text-blue-300 transition" href="#features">Features</a>
+        <a class="hover:text-blue-300 transition" href="#blog">Blog</a>
+        <a class="hover:text-blue-300 transition" href="#chat">Live Chat</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section id="nexusos" class="max-w-7xl mx-auto px-6 pt-16 pb-10 grid lg:grid-cols-2 gap-10 items-center">
+      <div>
+        <p class="font-mono text-blue-300 mb-3">Parent Company: NexusCodex</p>
+        <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight">NexusOS: The Modern Linux Distribution for Builders.</h1>
+        <p class="text-slate-300 mt-5 text-lg">Built for speed, hardened for security, and shaped by open-source ethics. NexusOS gives developers and teams a production-grade Linux experience with elegance and control.</p>
+        <div class="mt-8 flex gap-3">
+          <a href="#chat" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 transition font-semibold">Join Community Chat</a>
+          <a href="#blog" class="px-5 py-3 rounded-xl border border-slate-600 hover:border-blue-300 hover:text-blue-200 transition">Read Updates</a>
+        </div>
+      </div>
+      <div class="rounded-2xl p-5 glass border-glow font-mono text-sm">
+        <div class="text-slate-400 mb-3">nexusos@terminal:~$</div>
+        <div id="terminal" class="min-h-56 text-green-300 whitespace-pre-wrap terminal-caret"></div>
+      </div>
+    </section>
+
+    <section id="features" class="max-w-7xl mx-auto px-6 py-10">
+      <h2 class="text-3xl font-bold mb-6">Why teams choose NexusOS</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition">
+          <h3 class="font-semibold text-xl">Performance First</h3>
+          <p class="text-slate-300 mt-2">Optimized kernel profile, lean defaults, and fast package operations for desktop and server workloads.</p>
+        </article>
+        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition">
+          <h3 class="font-semibold text-xl">Secure by Design</h3>
+          <p class="text-slate-300 mt-2">Strong baseline hardening, sandbox-friendly tooling, and update transparency for confident operations.</p>
+        </article>
+        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition">
+          <h3 class="font-semibold text-xl">Open-source Ethics</h3>
+          <p class="text-slate-300 mt-2">Community governance, auditable changes, and contributor-first workflows aligned with Linux values.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="blog" class="max-w-7xl mx-auto px-6 py-12">
+      <div class="flex items-end justify-between gap-4 mb-6">
+        <div>
+          <h2 class="text-3xl font-bold">Unified Blog</h2>
+          <p class="text-slate-300">Updates, kernel news, and community stories.</p>
+        </div>
+      </div>
+      <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <section id="chat" class="max-w-7xl mx-auto px-6 pb-20">
+      <h2 class="text-3xl font-bold mb-2">Public Live Chat</h2>
+      <p class="text-slate-300 mb-5">Choose a handle, type a message, and broadcast in real time.</p>
+      <div class="grid lg:grid-cols-[300px_1fr] gap-4">
+        <aside class="rounded-xl p-4 glass border border-slate-800">
+          <label class="block text-sm text-slate-300 mb-1" for="handle">Your Handle</label>
+          <input id="handle" maxlength="24" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700 focus:outline-none focus:border-blue-400" placeholder="linux_dev" />
+          <p class="text-xs text-slate-400 mt-2">Stored in your browser for next time.</p>
+          <div id="connection" class="mt-4 text-xs text-amber-300">Connecting to Supabase…</div>
+        </aside>
+        <div class="rounded-xl p-4 glass border border-slate-800">
+          <div id="messages" class="h-80 overflow-y-auto space-y-3 pr-2"></div>
+          <form id="chat-form" class="mt-4 flex gap-2">
+            <input id="message" maxlength="500" required class="flex-1 px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700 focus:outline-none focus:border-blue-400" placeholder="Type your message" />
+            <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Send</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+
+    (function restoreRedirectPath() {
+      const params = new URLSearchParams(window.location.search);
+      const redirected = params.get('redirect');
+      if (!redirected) return;
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
+    })();
+    const BLOG_POSTS = [
+      { category: 'Updates', title: 'NexusOS 1.2 release candidate', excerpt: 'Boot speed and memory improvements shipped for broader hardware compatibility.', date: 'May 21, 2026' },
+      { category: 'Kernel News', title: 'Scheduler tuning for dev workloads', excerpt: 'NexusCodex kernel team details latency reductions for compile-heavy pipelines.', date: 'May 18, 2026' },
+      { category: 'Community', title: 'Contributor spotlight: packaging guild', excerpt: 'Meet maintainers improving package reliability and rollback safety.', date: 'May 14, 2026' }
+    ];
+
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const TABLE = 'chat_messages';
+
+    function renderBlogs() {
+      const grid = document.getElementById('blog-grid');
+      grid.innerHTML = BLOG_POSTS.map(post => `
+        <article class="rounded-xl p-5 glass border border-slate-800 hover:border-blue-400 transition">
+          <div class="text-xs font-mono text-blue-300">${post.category} · ${post.date}</div>
+          <h3 class="text-xl font-semibold mt-2">${post.title}</h3>
+          <p class="text-slate-300 mt-2">${post.excerpt}</p>
+        </article>`).join('');
+    }
+
+    function startTerminalAnimation() {
+      const terminal = document.getElementById('terminal');
+      const lines = [
+        'sudo nexus update',
+        ':: syncing repositories... done',
+        ':: security policies verified ✔',
+        ':: kernel profile: performance-hardened',
+        ':: system ready for deployment'
+      ];
+      let i = 0;
+      const tick = () => {
+        if (i < lines.length) {
+          terminal.textContent += `${lines[i]}\n`;
+          i += 1;
+          setTimeout(tick, 550);
+        }
+      };
+      tick();
+    }
+
+    function escapeHTML(value) {
+      const div = document.createElement('div');
+      div.textContent = value;
+      return div.innerHTML;
+    }
+
+    async function initChat() {
+      const handleInput = document.getElementById('handle');
+      const messageInput = document.getElementById('message');
+      const messagesEl = document.getElementById('messages');
+      const statusEl = document.getElementById('connection');
+      const form = document.getElementById('chat-form');
+
+      const saved = localStorage.getItem('nexuscodex_handle');
+      if (saved) handleInput.value = saved;
+
+      if (SUPABASE_URL.startsWith('YOUR_')) {
+        statusEl.textContent = 'Chat setup required: add Supabase URL/Anon Key in script constants.';
+        statusEl.className = 'mt-4 text-xs text-red-300';
+        return;
+      }
+
+      const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      statusEl.textContent = 'Connected';
+      statusEl.className = 'mt-4 text-xs text-emerald-300';
+
+      const render = (msg) => {
+        const item = document.createElement('article');
+        item.className = 'p-3 rounded-lg bg-slate-900/70 border border-slate-700';
+        item.innerHTML = `<div class="text-xs text-blue-300 font-mono">${escapeHTML(msg.handle)} · ${new Date(msg.created_at).toLocaleString()}</div>
+          <p class="mt-1 text-slate-100">${escapeHTML(msg.body)}</p>`;
+        messagesEl.appendChild(item);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
+
+      const { data } = await client.from(TABLE).select('*').order('created_at', { ascending: true }).limit(100);
+      (data || []).forEach(render);
+
+      client.channel('public:chat').on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: TABLE
+      }, (payload) => render(payload.new)).subscribe();
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const handle = (handleInput.value || 'guest').trim().slice(0, 24);
+        const body = messageInput.value.trim().slice(0, 500);
+        if (!body) return;
+        localStorage.setItem('nexuscodex_handle', handle);
+        await client.from(TABLE).insert({ handle, body });
+        messageInput.value = '';
+      });
+    }
+
+    renderBlogs();
+    startTerminalAnimation();
+    initChat();
+  </script>
+</body>
+</html>
