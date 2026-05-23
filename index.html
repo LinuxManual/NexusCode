@@ -3,22 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NexusCodex | NexusOS Platform</title>
-  <meta name="description" content="NexusCodex powers NexusOS: a modern Linux distribution focused on performance, security, and open-source collaboration." />
+  <title>NexusCodex | Secure Portal</title>
+  <meta name="description" content="NexusCodex powers NexusOS with secure engineering, open-source values, and global community collaboration." />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular']
-          },
-          boxShadow: { neon: '0 0 40px rgba(59,130,246,.20)' }
-        }
-      }
-    }
-  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -30,183 +17,200 @@
     @keyframes blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
   </style>
 </head>
-<body class="text-slate-100 font-sans">
-  <header class="sticky top-0 z-40 border-b border-slate-800/80 glass">
-    <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-      <div class="font-bold tracking-wide">NexusCodex</div>
-      <div class="hidden md:flex gap-5 text-sm text-slate-300">
-        <a class="hover:text-blue-300 transition" href="#nexusos">NexusOS</a>
-        <a class="hover:text-blue-300 transition" href="#features">Features</a>
-        <a class="hover:text-blue-300 transition" href="#roadmap">Roadmap</a>
-        <a class="hover:text-blue-300 transition" href="#blog">Blog</a>
-        <a class="hover:text-blue-300 transition" href="#chat">Live Chat</a>
-      </div>
-    </nav>
-  </header>
+<body class="text-slate-100 font-sans min-h-screen">
+  <div id="lock-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 backdrop-blur-xl p-4">
+    <div class="glass border border-blue-500/40 rounded-2xl p-8 w-full max-w-md shadow-2xl">
+      <p class="font-mono text-blue-300 text-sm">NexusCodex Secure Entry</p>
+      <h1 class="text-2xl font-bold mt-2">Access Required</h1>
+      <p class="text-slate-300 mt-2">Enter access code to unlock the site.</p>
+      <form id="lock-form" class="mt-5 space-y-3">
+        <input id="access-code" type="password" inputmode="numeric" maxlength="8" placeholder="Enter code" class="w-full px-3 py-3 rounded-lg bg-slate-900/70 border border-slate-700" required>
+        <button class="w-full px-4 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Unlock</button>
+      </form>
+      <p id="lock-error" class="text-red-300 text-sm mt-3 hidden">Wrong code. Try again.</p>
+    </div>
+  </div>
 
-  <main class="max-w-7xl mx-auto px-6">
-    <section id="nexusos" class="pt-16 pb-12 grid lg:grid-cols-2 gap-10 items-center">
-      <div>
-        <p class="font-mono text-blue-300 mb-3">Parent Company: NexusCodex</p>
-        <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight">NexusOS: High-Performance Linux for Modern Builders.</h1>
-        <p class="text-slate-300 mt-5 text-lg">A secure, elegant distribution engineered for developers, creators, and infrastructure teams who need speed and reliability without compromise.</p>
-        <div class="mt-8 flex flex-wrap gap-3">
-          <a href="#chat" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 transition font-semibold">Join Global Chat</a>
-          <a href="#blog" class="px-5 py-3 rounded-xl border border-slate-600 hover:border-blue-300 hover:text-blue-200 transition">Read Engineering Updates</a>
+  <div id="site-content" class="blur-sm pointer-events-none select-none">
+    <header class="sticky top-0 z-40 border-b border-slate-800/80 glass">
+      <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="font-bold tracking-wide">NexusCodex</div>
+        <div class="hidden md:flex gap-5 text-sm text-slate-300">
+          <a class="hover:text-blue-300 transition" href="#nexusos">NexusOS</a>
+          <a class="hover:text-blue-300 transition" href="#features">Features</a>
+          <a class="hover:text-blue-300 transition" href="#blog">Blog</a>
+          <a class="hover:text-blue-300 transition" href="#chat">Live Chat</a>
         </div>
-      </div>
-      <div class="rounded-2xl p-5 glass border border-blue-900/50 shadow-neon font-mono text-sm">
-        <div class="text-slate-400 mb-3">nexusos@terminal:~$</div>
-        <div id="terminal" class="min-h-64 text-green-300 whitespace-pre-wrap terminal-caret"></div>
-      </div>
-    </section>
+      </nav>
+    </header>
 
-    <section id="features" class="py-10">
-      <h2 class="text-3xl font-bold mb-6">Platform Highlights</h2>
-      <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition"><h3 class="font-semibold text-xl">Kernel Optimized</h3><p class="text-slate-300 mt-2">Tuned for reduced latency and fast compile pipelines.</p></article>
-        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition"><h3 class="font-semibold text-xl">Zero-Trust Security</h3><p class="text-slate-300 mt-2">Strong defaults, signed packages, and hardened runtime policies.</p></article>
-        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition"><h3 class="font-semibold text-xl">Dev Toolchain</h3><p class="text-slate-300 mt-2">Preconfigured tooling for Rust, Go, Python, containers, and CI.</p></article>
-        <article class="p-5 rounded-xl glass border border-slate-800 hover:border-blue-400 transition"><h3 class="font-semibold text-xl">Open Governance</h3><p class="text-slate-300 mt-2">Transparent roadmap and contributor-friendly ecosystem.</p></article>
-      </div>
-    </section>
-
-    <section id="roadmap" class="py-10">
-      <h2 class="text-3xl font-bold mb-6">Roadmap</h2>
-      <div class="grid md:grid-cols-3 gap-4 text-sm">
-        <div class="p-4 rounded-xl glass border border-slate-800"><p class="font-mono text-blue-300">Q3 2026</p><p class="mt-2">Immutable desktop profile and rollback snapshots.</p></div>
-        <div class="p-4 rounded-xl glass border border-slate-800"><p class="font-mono text-blue-300">Q4 2026</p><p class="mt-2">ARM workstation preview and low-power edge profile.</p></div>
-        <div class="p-4 rounded-xl glass border border-slate-800"><p class="font-mono text-blue-300">Q1 2027</p><p class="mt-2">Enterprise LTS channel with compliance automation.</p></div>
-      </div>
-    </section>
-
-    <section id="blog" class="py-12">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
-        <div><h2 class="text-3xl font-bold">Unified Blog</h2><p class="text-slate-300">Release notes, kernel deep-dives, and community stories.</p></div>
-        <div class="flex gap-2">
-          <input id="blog-search" placeholder="Search posts" class="px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
-          <select id="blog-filter" class="px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700">
-            <option value="all">All</option><option value="Updates">Updates</option><option value="Kernel">Kernel</option><option value="Community">Community</option>
-          </select>
+    <main class="max-w-7xl mx-auto px-6">
+      <section id="nexusos" class="pt-16 pb-12 grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <p class="font-mono text-blue-300 mb-3">Parent Company: NexusCodex</p>
+          <h1 class="text-4xl lg:text-6xl font-extrabold leading-tight">NexusOS: High-Performance Linux for Modern Builders.</h1>
+          <p class="text-slate-300 mt-5 text-lg">Secure by design, fast by default, and open-source at its core.</p>
         </div>
-      </div>
-      <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-    </section>
-
-    <section id="chat" class="pb-20">
-      <h2 class="text-3xl font-bold mb-2">Public Live Chat</h2>
-      <p class="text-slate-300 mb-5">Works on GitHub Pages via Supabase. Configure once and chat in real time.</p>
-      <div class="grid xl:grid-cols-[350px_1fr] gap-4">
-        <aside class="rounded-xl p-4 glass border border-slate-800 space-y-3">
-          <h3 class="font-semibold">Chat Setup</h3>
-          <input id="supabase-url" placeholder="Supabase URL" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
-          <input id="supabase-key" placeholder="Supabase Anon Key" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
-          <input id="chat-room" placeholder="Room (default: global)" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
-          <input id="handle" maxlength="24" placeholder="Your handle" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
-          <button id="connect-btn" class="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Connect Chat</button>
-          <div id="connection" class="text-xs text-amber-300">Not connected.</div>
-          <p class="text-xs text-slate-400">Required table schema: <span class="font-mono">chat_messages(room text, handle text, body text, created_at timestamptz default now())</span></p>
-        </aside>
-        <div class="rounded-xl p-4 glass border border-slate-800">
-          <div id="messages" class="h-96 overflow-y-auto space-y-3 pr-2"></div>
-          <form id="chat-form" class="mt-4 flex gap-2">
-            <input id="message" maxlength="500" required class="flex-1 px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" placeholder="Type your message" />
-            <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Send</button>
-          </form>
+        <div class="rounded-2xl p-5 glass border border-blue-900/50 shadow-2xl font-mono text-sm">
+          <div class="text-slate-400 mb-3">nexusos@terminal:~$</div>
+          <div id="terminal" class="min-h-64 text-green-300 whitespace-pre-wrap terminal-caret"></div>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
+      <section id="features" class="py-10">
+        <h2 class="text-3xl font-bold mb-6">Platform Highlights</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          <article class="p-5 rounded-xl glass border border-slate-800"><h3 class="font-semibold text-xl">Kernel Optimized</h3><p class="text-slate-300 mt-2">Reduced latency and excellent throughput.</p></article>
+          <article class="p-5 rounded-xl glass border border-slate-800"><h3 class="font-semibold text-xl">Zero-Trust Security</h3><p class="text-slate-300 mt-2">Signed package pipelines and hardened defaults.</p></article>
+          <article class="p-5 rounded-xl glass border border-slate-800"><h3 class="font-semibold text-xl">Open Governance</h3><p class="text-slate-300 mt-2">Transparent development and community-first decisions.</p></article>
+        </div>
+      </section>
+
+      <section id="blog" class="py-12">
+        <h2 class="text-3xl font-bold">Unified Blog</h2>
+        <p class="text-slate-300 mb-5">Release notes and engineering stories.</p>
+        <div id="blog-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </section>
+
+      <section id="chat" class="pb-20">
+        <h2 class="text-3xl font-bold mb-2">Public Live Chat (Firebase)</h2>
+        <p class="text-slate-300 mb-5">Only your name is required. Messages are saved and visible to everyone in real time.</p>
+        <div class="grid xl:grid-cols-[320px_1fr] gap-4">
+          <aside class="rounded-xl p-4 glass border border-slate-800 space-y-3">
+            <h3 class="font-semibold">Your Profile</h3>
+            <input id="handle" maxlength="24" placeholder="Your name" class="w-full px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" />
+            <button id="save-name" class="w-full px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Save Name</button>
+            <div id="connection" class="text-xs text-amber-300">Connecting to Firebase…</div>
+            <p class="text-xs text-slate-400">Set your Firebase config in <span class="font-mono">firebaseConfig</span> inside this file.</p>
+          </aside>
+          <div class="rounded-xl p-4 glass border border-slate-800">
+            <div id="messages" class="h-96 overflow-y-auto space-y-3 pr-2"></div>
+            <form id="chat-form" class="mt-4 flex gap-2">
+              <input id="message" maxlength="500" required class="flex-1 px-3 py-2 rounded-lg bg-slate-900/70 border border-slate-700" placeholder="Type your message" />
+              <button class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition font-semibold">Send</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
+    import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+
+    const ACCESS_CODE = '2945';
     const BLOG_POSTS = [
       { category: 'Updates', title: 'NexusOS 1.3 Alpha boots 18% faster', excerpt: 'New init pipeline and parallel service graph reduce startup costs.', date: 'May 22, 2026' },
       { category: 'Kernel', title: 'I/O scheduler tuning for container-heavy hosts', excerpt: 'Latency consistency improves for mixed workloads and CI runners.', date: 'May 19, 2026' },
-      { category: 'Community', title: 'Packaging guild opens mentorship cohort', excerpt: 'Contributors can join a guided path for package quality reviews.', date: 'May 15, 2026' },
-      { category: 'Kernel', title: 'Security advisory response cycle reduced to 24h', excerpt: 'Automated CVE tracking now pushes quicker mitigations downstream.', date: 'May 12, 2026' }
+      { category: 'Community', title: 'Packaging guild opens mentorship cohort', excerpt: 'Contributors can join a guided path for package quality reviews.', date: 'May 15, 2026' }
     ];
 
-    function esc(v){const d=document.createElement('div');d.textContent=v;return d.innerHTML;}
-    function restoreRedirectPath(){const p=new URLSearchParams(location.search);if(p.get('redirect'))history.replaceState({},'',location.pathname+location.hash);}restoreRedirectPath();
+    // Replace with your Firebase project config.
+    const firebaseConfig = {
+      apiKey: 'YOUR_API_KEY',
+      authDomain: 'YOUR_PROJECT.firebaseapp.com',
+      projectId: 'YOUR_PROJECT_ID',
+      storageBucket: 'YOUR_PROJECT.appspot.com',
+      messagingSenderId: 'YOUR_SENDER_ID',
+      appId: 'YOUR_APP_ID'
+    };
+
+    function esc(v) { const d = document.createElement('div'); d.textContent = v; return d.innerHTML; }
+
+    function unlockSite() {
+      const lockScreen = document.getElementById('lock-screen');
+      const siteContent = document.getElementById('site-content');
+      lockScreen.classList.add('hidden');
+      siteContent.classList.remove('blur-sm', 'pointer-events-none', 'select-none');
+    }
+
+    document.getElementById('lock-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const code = document.getElementById('access-code').value.trim();
+      if (code === ACCESS_CODE) {
+        sessionStorage.setItem('nexus_unlock', 'ok');
+        unlockSite();
+      } else {
+        document.getElementById('lock-error').classList.remove('hidden');
+      }
+    });
+
+    if (sessionStorage.getItem('nexus_unlock') === 'ok') {
+      unlockSite();
+    }
 
     function renderBlogs() {
-      const term = document.getElementById('blog-search').value.toLowerCase().trim();
-      const f = document.getElementById('blog-filter').value;
-      const filtered = BLOG_POSTS.filter(p => (f === 'all' || p.category === f) && (`${p.title} ${p.excerpt}`.toLowerCase().includes(term)));
-      document.getElementById('blog-grid').innerHTML = filtered.map(post => `
+      document.getElementById('blog-grid').innerHTML = BLOG_POSTS.map(post => `
         <article class="rounded-xl p-5 glass border border-slate-800 hover:border-blue-400 transition">
           <div class="text-xs font-mono text-blue-300">${esc(post.category)} · ${esc(post.date)}</div>
           <h3 class="text-xl font-semibold mt-2">${esc(post.title)}</h3>
           <p class="text-slate-300 mt-2">${esc(post.excerpt)}</p>
-        </article>`).join('') || '<p class="text-slate-300">No posts found.</p>';
+        </article>`).join('');
     }
 
     function startTerminalAnimation() {
       const lines = ['sudo nexus upgrade', ':: repos synced', ':: signatures verified ✔', ':: profile security/hardened', ':: nexusos ready'];
       const el = document.getElementById('terminal');
-      let i = 0; (function t(){ if(i<lines.length){el.textContent += lines[i++]+'\n'; setTimeout(t, 450);} })();
+      let i = 0;
+      (function t(){ if(i < lines.length){ el.textContent += lines[i++] + '\n'; setTimeout(t, 450); } })();
     }
 
-    const chatState = { client: null, channel: null, room: 'global', connected: false };
-    function setStatus(msg, cls='text-amber-300'){ const el=document.getElementById('connection'); el.className=`text-xs ${cls}`; el.textContent=msg; }
+    function setStatus(msg, cls = 'text-amber-300') {
+      const el = document.getElementById('connection');
+      el.className = `text-xs ${cls}`;
+      el.textContent = msg;
+    }
 
-    async function connectChat(){
-      const url = document.getElementById('supabase-url').value.trim();
-      const key = document.getElementById('supabase-key').value.trim();
-      const room = (document.getElementById('chat-room').value.trim() || 'global').slice(0,40);
-      if(!url || !key){ setStatus('Please provide Supabase URL and Anon Key.', 'text-red-300'); return; }
-      localStorage.setItem('nc_supabase_url', url); localStorage.setItem('nc_supabase_key', key); localStorage.setItem('nc_room', room);
+    const savedName = localStorage.getItem('nc_handle');
+    if (savedName) document.getElementById('handle').value = savedName;
+    document.getElementById('save-name').addEventListener('click', () => {
+      const name = (document.getElementById('handle').value.trim() || 'guest').slice(0, 24);
+      localStorage.setItem('nc_handle', name);
+      setStatus(`Name saved as: ${name}`, 'text-emerald-300');
+    });
 
+    const hasPlaceholderConfig = Object.values(firebaseConfig).some((v) => String(v).includes('YOUR_'));
+    if (hasPlaceholderConfig) {
+      setStatus('Add Firebase config to enable chat.', 'text-red-300');
+    } else {
       try {
-        if(chatState.channel){ await chatState.client.removeChannel(chatState.channel); }
-        chatState.client = supabase.createClient(url, key);
-        chatState.room = room;
-        chatState.connected = true;
-        document.getElementById('messages').innerHTML = '';
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const messagesRef = collection(db, 'messages');
 
-        const { data, error } = await chatState.client.from('chat_messages').select('*').eq('room', room).order('created_at', { ascending: true }).limit(150);
-        if(error) throw error;
-        (data || []).forEach(renderMessage);
+        const q = query(messagesRef, orderBy('createdAt', 'asc'), limit(200));
+        onSnapshot(q, (snapshot) => {
+          const container = document.getElementById('messages');
+          container.innerHTML = '';
+          snapshot.forEach((doc) => {
+            const msg = doc.data();
+            const row = document.createElement('article');
+            row.className = 'p-3 rounded-lg bg-slate-900/70 border border-slate-700';
+            row.innerHTML = `<div class="text-xs text-blue-300 font-mono">${esc(msg.name || 'guest')} · ${msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleString() : 'sending...'}</div><p class="mt-1 text-slate-100">${esc(msg.text || '')}</p>`;
+            container.appendChild(row);
+          });
+          container.scrollTop = container.scrollHeight;
+        });
 
-        chatState.channel = chatState.client.channel(`room:${room}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `room=eq.${room}` }, payload => renderMessage(payload.new)).subscribe();
-        setStatus(`Connected to room: ${room}`, 'text-emerald-300');
-      } catch (e) {
-        setStatus(`Connection error: ${e.message}`, 'text-red-300');
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = (document.getElementById('handle').value.trim() || 'guest').slice(0, 24);
+          const text = document.getElementById('message').value.trim().slice(0, 500);
+          if (!text) return;
+          localStorage.setItem('nc_handle', name);
+          await addDoc(messagesRef, { name, text, createdAt: serverTimestamp() });
+          document.getElementById('message').value = '';
+        });
+
+        setStatus('Connected to Firebase chat.', 'text-emerald-300');
+      } catch (err) {
+        setStatus(`Firebase error: ${err.message}`, 'text-red-300');
       }
     }
 
-    function renderMessage(msg){
-      const el = document.createElement('article');
-      el.className = 'p-3 rounded-lg bg-slate-900/70 border border-slate-700';
-      el.innerHTML = `<div class="text-xs text-blue-300 font-mono">${esc(msg.handle || 'guest')} · ${new Date(msg.created_at).toLocaleString()}</div><p class="mt-1 text-slate-100">${esc(msg.body || '')}</p>`;
-      const root = document.getElementById('messages'); root.appendChild(el); root.scrollTop = root.scrollHeight;
-    }
-
-    async function sendMessage(e){
-      e.preventDefault();
-      if(!chatState.connected) { setStatus('Connect chat first.', 'text-red-300'); return; }
-      const handle = (document.getElementById('handle').value.trim() || 'guest').slice(0,24);
-      const body = document.getElementById('message').value.trim().slice(0,500);
-      if(!body) return;
-      localStorage.setItem('nc_handle', handle);
-      const { error } = await chatState.client.from('chat_messages').insert({ room: chatState.room, handle, body });
-      if(error){ setStatus(`Send failed: ${error.message}`, 'text-red-300'); return; }
-      document.getElementById('message').value = '';
-    }
-
-    function preloadSettings(){
-      document.getElementById('supabase-url').value = localStorage.getItem('nc_supabase_url') || '';
-      document.getElementById('supabase-key').value = localStorage.getItem('nc_supabase_key') || '';
-      document.getElementById('chat-room').value = localStorage.getItem('nc_room') || 'global';
-      document.getElementById('handle').value = localStorage.getItem('nc_handle') || '';
-    }
-
-    document.getElementById('blog-search').addEventListener('input', renderBlogs);
-    document.getElementById('blog-filter').addEventListener('change', renderBlogs);
-    document.getElementById('connect-btn').addEventListener('click', connectChat);
-    document.getElementById('chat-form').addEventListener('submit', sendMessage);
-    preloadSettings(); renderBlogs(); startTerminalAnimation();
+    renderBlogs();
+    startTerminalAnimation();
   </script>
 </body>
 </html>
