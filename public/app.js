@@ -1,23 +1,41 @@
+function setText(element, value) {
+  element.textContent = value;
+}
+
+function createBlogCard(post) {
+  const article = document.createElement('article');
+  article.className = 'card';
+
+  const meta = document.createElement('div');
+  meta.className = 'blog-meta';
+  setText(meta, `${post.date} · ${post.author}`);
+
+  const title = document.createElement('h3');
+  setText(title, post.title);
+
+  const excerpt = document.createElement('p');
+  setText(excerpt, post.excerpt);
+
+  article.append(meta, title, excerpt);
+  return article;
+}
+
 async function loadBlogs() {
   const container = document.getElementById('blog-list');
+  setText(container, 'Loading latest insights...');
 
   try {
     const response = await fetch('/api/blogs');
-    const posts = await response.json();
+    if (!response.ok) {
+      throw new Error(`Blog request failed with ${response.status}`);
+    }
 
-    container.innerHTML = posts
-      .map(
-        (post) => `
-          <article class="card">
-            <div class="blog-meta">${post.date} · ${post.author}</div>
-            <h3>${post.title}</h3>
-            <p>${post.excerpt}</p>
-          </article>
-        `
-      )
-      .join('');
+    const posts = await response.json();
+    container.replaceChildren(...posts.map(createBlogCard));
   } catch (_error) {
-    container.innerHTML = '<p>Unable to load blogs at the moment.</p>';
+    const message = document.createElement('p');
+    setText(message, 'Unable to load blogs at the moment. Please refresh or try again soon.');
+    container.replaceChildren(message);
   }
 }
 
@@ -27,21 +45,39 @@ function initChat() {
   const nameInput = document.getElementById('name-input');
   const messageInput = document.getElementById('message-input');
   const chatMessages = document.getElementById('chat-messages');
+  const status = document.getElementById('chat-status');
+
+  const updateStatus = (message) => {
+    setText(status, message);
+  };
 
   const renderMessage = (message) => {
     const element = document.createElement('article');
     element.className = 'message';
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+
+    const sender = document.createElement('strong');
+    setText(sender, message.sender);
+
     const date = new Date(message.timestamp);
-    element.innerHTML = `
-      <div class="meta"><strong>${message.sender}</strong> · ${date.toLocaleString()}</div>
-      <p>${message.text}</p>
-    `;
+    meta.append(sender, ` · ${date.toLocaleString()}`);
+
+    const text = document.createElement('p');
+    setText(text, message.text);
+
+    element.append(meta, text);
     chatMessages.appendChild(element);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   };
 
+  socket.on('connect', () => updateStatus('Connected to live chat.'));
+  socket.on('disconnect', () => updateStatus('Reconnecting to live chat...'));
+  socket.on('connect_error', () => updateStatus('Unable to connect to live chat.'));
+
   socket.on('chat:history', (history) => {
-    chatMessages.innerHTML = '';
+    chatMessages.replaceChildren();
     history.forEach(renderMessage);
   });
 
@@ -61,6 +97,7 @@ function initChat() {
     });
 
     messageInput.value = '';
+    messageInput.focus();
   });
 }
 

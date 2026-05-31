@@ -3,11 +3,9 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-app.use(express.static(path.join(__dirname, 'public')));
+const MAX_MESSAGES = 200;
+const MAX_MESSAGE_LENGTH = 600;
+const MAX_NAME_LENGTH = 24;
 
 const blogPosts = [
   {
@@ -39,50 +37,87 @@ const blogPosts = [
   }
 ];
 
-app.get('/api/blogs', (_req, res) => {
-  res.json(blogPosts);
-});
+const normalizeText = (value, fallback = '') => String(value || fallback).trim();
 
-app.get('/api/blogs/:id', (req, res) => {
-  const post = blogPosts.find((item) => item.id === req.params.id);
-  if (!post) {
-    return res.status(404).json({ message: 'Post not found' });
-  }
+function createApp() {
+  const app = express();
 
-  return res.json(post);
-});
+  app.disable('x-powered-by');
+  app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], maxAge: '1h' }));
 
-const messages = [];
-
-io.on('connection', (socket) => {
-  socket.emit('chat:history', messages);
-
-  socket.on('chat:message', (payload) => {
-    const trimmedText = (payload?.text || '').trim();
-    const sender = (payload?.name || 'Guest').trim().slice(0, 24) || 'Guest';
-
-    if (!trimmedText) {
-      return;
-    }
-
-    const message = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      sender,
-      text: trimmedText.slice(0, 600),
-      timestamp: new Date().toISOString()
-    };
-
-    messages.push(message);
-
-    if (messages.length > 200) {
-      messages.splice(0, messages.length - 200);
-    }
-
-    io.emit('chat:message', message);
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok', service: 'nexuscode-site' });
   });
-});
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`NexusCode site is running on http://localhost:${PORT}`);
-});
+  app.get('/api/blogs', (_req, res) => {
+    res.json(blogPosts);
+  });
+
+  app.get('/api/blogs/:id', (req, res) => {
+    const post = blogPosts.find((item) => item.id === req.params.id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    return res.json(post);
+  });
+
+  return app;
+}
+
+function attachRealtimeChat(server, options = {}) {
+  const io = new Server(server, {
+    cors: { origin: false },
+    ...options
+  });
+  const messages = [];
+
+  io.on('connection', (socket) => {
+    socket.emit('chat:history', messages);
+
+    socket.on('chat:message', (payload = {}) => {
+      const trimmedText = normalizeText(payload.text);
+      const sender = normalizeText(payload.name, 'Guest').slice(0, MAX_NAME_LENGTH) || 'Guest';
+
+      if (!trimmedText) {
+        return;
+      }
+
+      const message = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        sender,
+        text: trimmedText.slice(0, MAX_MESSAGE_LENGTH),
+        timestamp: new Date().toISOString()
+      };
+
+      messages.push(message);
+
+      if (messages.length > MAX_MESSAGES) {
+        messages.splice(0, messages.length - MAX_MESSAGES);
+      }
+
+      io.emit('chat:message', message);
+    });
+  });
+
+  return io;
+}
+
+function createServer() {
+  const app = createApp();
+  const server = http.createServer(app);
+  const io = attachRealtimeChat(server);
+
+  return { app, server, io };
+}
+
+if (require.main === module) {
+  const { server } = createServer();
+  const PORT = process.env.PORT || 3000;
+
+  server.listen(PORT, () => {
+    console.log(`NexusCode site is running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = { createApp, createServer, attachRealtimeChat, blogPosts };
