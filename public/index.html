@@ -24,6 +24,7 @@
           <a href="#services">Services</a>
           <a href="#about">About</a>
           <a href="#blogs">Blogs</a>
+          <a href="#nexus-runner">Nexus Runner</a>
           <a href="#chat">Community Chat</a>
         </div>
       </nav>
@@ -84,6 +85,36 @@
           <p>Insights from our team on software, AI, security, and digital growth.</p>
         </div>
         <div id="blog-list" class="grid three"></div>
+      </section>
+
+      <section class="section game-section" id="nexus-runner">
+        <div class="container game-wrap">
+          <div class="section-header game-header">
+            <div>
+              <p class="eyebrow">Interactive Experience</p>
+              <h2>Nexus Runner</h2>
+              <p>A futuristic browser game inspired by Chrome Dino, upgraded with neon visuals, shields, drones, and progressive speed.</p>
+            </div>
+            <div class="game-scoreboard" aria-live="polite">
+              <span>Score <strong id="game-score">0</strong></span>
+              <span>Best <strong id="game-best">0</strong></span>
+            </div>
+          </div>
+
+          <div class="game-shell">
+            <canvas id="runner-canvas" width="960" height="360" aria-label="Nexus Runner game canvas"></canvas>
+            <div class="game-overlay" id="game-overlay">
+              <strong>Nexus Runner</strong>
+              <span>Press Space, ↑, or tap to jump. Press ↓ to phase-slide.</span>
+              <button type="button" id="game-start">Start Mission</button>
+            </div>
+          </div>
+          <div class="game-controls" aria-label="Game controls">
+            <button type="button" data-game-action="jump">Jump</button>
+            <button type="button" data-game-action="slide">Phase Slide</button>
+            <button type="button" data-game-action="restart">Restart</button>
+          </div>
+        </div>
       </section>
 
       <section class="section section-muted" id="chat">
