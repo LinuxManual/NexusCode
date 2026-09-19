@@ -1,756 +1,733 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexusOS v4.0 | Enterprise Build</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --sys-bg: #05050a;
-            --sys-accent: #00f0ff;
-            --sys-green: #00ff41;
-            --sys-red: #ff003c;
-            --sys-purple: #b000ff;
-            --window-bg: rgba(10, 12, 20, 0.85);
-            --window-border: rgba(0, 240, 255, 0.3);
-            --taskbar-bg: rgba(5, 5, 10, 0.95);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        body {
-            background-color: var(--sys-bg);
-            color: var(--sys-accent);
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            margin: 0;
-            height: 100vh;
-            width: 100vw;
-            user-select: none;
-        }
+  <title>NexusCode | NexusOS</title>
 
-        /* CRT Effects */
-        body::before {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 9999;
-            background-size: 100% 2px, 3px 100%;
-            pointer-events: none;
-        }
+  <meta
+    name="description"
+    content="NexusCode is a professional technology company delivering software engineering, AI solutions, cybersecurity, and secure digital platforms."
+  />
 
-        .scanline {
-            width: 100%; height: 100px;
-            background: linear-gradient(0deg, transparent, rgba(0, 240, 255, 0.05), transparent);
-            position: absolute; z-index: 9998;
-            animation: scanline 8s linear infinite; pointer-events: none;
-        }
-        @keyframes scanline { 0% { top: -100px; } 100% { top: 100%; } }
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-        /* Window Manager Styles */
-        .desktop { position: relative; width: 100%; height: calc(100vh - 40px); overflow: hidden; }
-        
-        .sys-window {
-            position: absolute;
-            background: var(--window-bg);
-            border: 1px solid var(--window-border);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(0, 240, 255, 0.05);
-            display: flex; flex-direction: column;
-            min-width: 300px; min-height: 200px;
-            border-radius: 6px 6px 0 0;
-            transition: transform 0.1s;
-        }
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
 
-        .sys-window.minimized { display: none !important; }
-        .sys-window.maximized { top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; border-radius: 0; }
-        
-        .win-header {
-            background: rgba(0, 240, 255, 0.1);
-            padding: 8px 12px;
-            cursor: grab;
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--window-border);
-            font-family: 'Fira Code', monospace; font-size: 12px; font-weight: 600; text-transform: uppercase;
-        }
-        .win-header:active { cursor: grabbing; }
-        .win-content { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; }
-        
-        /* Desktop Icons */
-        .icon-grid { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, 80px); gap: 20px; align-content: start; height: 100%; }
-        .d-icon {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            width: 80px; height: 80px; cursor: pointer; border-radius: 8px; transition: 0.2s;
-        }
-        .d-icon:hover { background: rgba(0, 240, 255, 0.1); border: 1px solid rgba(0,240,255,0.3); }
-        .d-icon svg { width: 40px; height: 40px; margin-bottom: 8px; color: var(--sys-accent); drop-shadow: 0 0 5px var(--sys-accent); }
-        .d-icon span { font-size: 11px; text-shadow: 0 0 4px black; text-align: center; }
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-        /* Taskbar */
-        .taskbar {
-            height: 40px; background: var(--taskbar-bg); border-top: 1px solid var(--window-border);
-            display: flex; align-items: center; justify-content: space-between; padding: 0 10px; z-index: 9000; position: relative;
-        }
-        .start-btn {
-            background: rgba(0, 240, 255, 0.15); border: 1px solid var(--sys-accent); padding: 4px 15px;
-            font-family: 'Fira Code', monospace; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s;
-        }
-        .start-btn:hover { background: var(--sys-accent); color: black; box-shadow: 0 0 15px var(--sys-accent); }
-        .task-list { flex: 1; display: flex; gap: 5px; margin: 0 15px; }
-        .task-item {
-            padding: 4px 15px; background: rgba(255,255,255,0.05); border-bottom: 2px solid transparent;
-            font-size: 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-        .task-item.active { background: rgba(0, 240, 255, 0.1); border-bottom: 2px solid var(--sys-accent); }
-        
-        /* Terminal Specifics */
-        .term-container { background: rgba(2,2,4,0.9); font-family: 'Fira Code', monospace; padding: 10px; overflow-y: auto; flex: 1; font-size: 13px; line-height: 1.5; }
-        .term-input-line { display: flex; background: #000; border-top: 1px solid var(--window-border); padding: 8px 10px; font-family: 'Fira Code', monospace; }
-        .term-input { flex: 1; background: transparent; border: none; color: white; outline: none; margin-left: 8px; font-family: inherit; font-size: 13px; }
-        
-        /* Scrollbars */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); }
-        ::-webkit-scrollbar-thumb { background: var(--sys-accent); border-radius: 3px; }
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
 
-        /* Auth Screen */
-        .auth-screen { position: fixed; inset: 0; background: var(--sys-bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 1s; }
-        .matrix-bg { position: absolute; inset: 0; opacity: 0.15; pointer-events: none; }
-    </style>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: Inter, sans-serif;
+    }
+
+    body {
+      overflow-x: hidden;
+    }
+
+    #desktop {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0, 240, 255, 0.08), transparent 45%),
+        #05050a;
+    }
+
+    #matrix-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #auth-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #05050a;
+      transition: opacity 0.8s ease;
+    }
+
+    #auth-form {
+      position: relative;
+      z-index: 2;
+    }
+
+    #task-list {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 40px;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 8px;
+      background: rgba(5, 5, 10, 0.94);
+      border-top: 1px solid rgba(0, 240, 255, 0.25);
+      backdrop-filter: blur(10px);
+      overflow-x: auto;
+    }
+
+    #start-btn {
+      position: fixed;
+      left: 8px;
+      bottom: 7px;
+      z-index: 9501;
+    }
+
+    #sys-clock {
+      position: fixed;
+      right: 14px;
+      bottom: 10px;
+      z-index: 9501;
+    }
+
+    #net-status {
+      position: fixed;
+      right: 120px;
+      bottom: 10px;
+      z-index: 9501;
+    }
+
+    .nexus-hidden {
+      display: none !important;
+    }
+  </style>
 </head>
-<body>
-    <div class="scanline"></div>
 
-    <!-- BOOT & AUTH SEQUENCE -->
-    <div id="auth" class="auth-screen">
-        <canvas id="matrix-canvas" class="matrix-bg"></canvas>
-        <div class="z-10 bg-black/80 p-10 border border-[var(--sys-accent)] shadow-[0_0_30px_rgba(0,240,255,0.2)] text-center w-full max-w-lg">
-            <h1 class="text-5xl font-bold font-mono tracking-widest mb-2" style="text-shadow: 0 0 10px var(--sys-accent)">NEXUS_OS</h1>
-            <p class="text-xs font-mono uppercase tracking-[0.3em] mb-8 text-[var(--sys-green)]">v4.0 Enterprise Kernel</p>
-            
-            <div id="boot-log" class="text-left font-mono text-xs text-gray-400 h-24 overflow-hidden mb-6 opacity-80"></div>
-            
-            <form id="auth-form" class="relative">
-                <input id="auth-pwd" type="password" placeholder="ENTER ROOT KEY" class="w-full bg-transparent border-b-2 border-[var(--sys-accent)] text-center text-xl font-mono text-white py-2 outline-none focus:border-[var(--sys-green)] transition-colors" autocomplete="off" autofocus>
-                <div id="auth-err" class="absolute -bottom-6 w-full text-[var(--sys-red)] text-xs font-mono hidden uppercase animate-pulse">ERR: UNAUTHORIZED ACCESS</div>
-            </form>
+<body class="bg-black text-white">
+
+  <!-- =========================================================
+       NEXUSOS MATRIX BACKGROUND
+       ========================================================= -->
+  <canvas id="matrix-bg"></canvas>
+
+
+  <!-- =========================================================
+       NEXUSOS AUTHENTICATION / BOOT SCREEN
+       ========================================================= -->
+  <div
+    id="auth-screen"
+    class="flex items-center justify-center"
+  >
+    <div class="w-full max-w-md px-6">
+
+      <div
+        class="border border-[rgba(0,240,255,0.35)]
+               bg-[rgba(5,5,10,0.92)]
+               backdrop-blur-xl
+               rounded-lg
+               p-6
+               shadow-[0_0_40px_rgba(0,240,255,0.12)]"
+      >
+
+        <div class="text-center mb-6">
+
+          <div
+            class="mx-auto mb-4
+                   w-16 h-16
+                   rounded-lg
+                   bg-[rgba(0,240,255,0.08)]
+                   border border-[rgba(0,240,255,0.4)]
+                   flex items-center justify-center
+                   text-[#00f0ff]
+                   text-3xl
+                   font-bold
+                   shadow-[0_0_20px_rgba(0,240,255,0.2)]"
+          >
+            N
+          </div>
+
+          <h1 class="text-[#00f0ff] text-xl font-bold tracking-widest">
+            NEXUS_OS
+          </h1>
+
+          <p class="text-gray-500 text-xs font-mono mt-2">
+            GLOBAL COMMAND INTERFACE
+          </p>
+
         </div>
+
+
+        <!-- Boot log -->
+        <div
+          id="boot-log"
+          class="h-32
+                 overflow-y-auto
+                 bg-black
+                 border border-[rgba(0,240,255,0.15)]
+                 rounded
+                 p-3
+                 mb-5
+                 text-[#00ff41]
+                 text-[11px]
+                 font-mono"
+        ></div>
+
+
+        <!-- Authentication -->
+        <form id="auth-form">
+
+          <label
+            for="auth-pwd"
+            class="block text-gray-500 text-xs font-mono mb-2"
+          >
+            OPERATOR AUTHENTICATION
+          </label>
+
+          <input
+            id="auth-pwd"
+            type="password"
+            autocomplete="off"
+            class="w-full
+                   bg-black
+                   border border-[rgba(0,240,255,0.35)]
+                   rounded
+                   px-3 py-3
+                   text-white
+                   font-mono
+                   outline-none
+                   focus:border-[#00f0ff]
+                   focus:ring-1
+                   focus:ring-[#00f0ff]"
+            placeholder="Enter access code"
+          />
+
+          <button
+            type="submit"
+            class="w-full
+                   mt-3
+                   py-3
+                   bg-[#00f0ff]
+                   text-black
+                   font-bold
+                   font-mono
+                   rounded
+                   hover:bg-white
+                   transition-colors"
+          >
+            AUTHENTICATE
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
+  </div>
 
-    <!-- DESKTOP ENVIRONMENT -->
-    <div class="desktop" id="desktop">
-        <!-- Icons -->
-        <div class="icon-grid">
-            <div class="d-icon" onclick="OS.WindowManager.openApp('terminal')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <span>Terminal</span>
-            </div>
-            <div class="d-icon" onclick="OS.WindowManager.openApp('monitor')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                <span>Telemetry</span>
-            </div>
-            <div class="d-icon" onclick="OS.WindowManager.openApp('chat')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                <span>Comms</span>
-            </div>
-            <div class="d-icon" onclick="OS.WindowManager.openApp('files')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                <span>SysFiles</span>
-            </div>
+
+  <!-- =========================================================
+       NEXUSOS DESKTOP
+       ========================================================= -->
+  <main
+    id="desktop"
+    class="relative"
+  ></main>
+
+
+  <!-- =========================================================
+       NEXUSOS TASKBAR
+       ========================================================= -->
+  <div id="task-list"></div>
+
+
+  <!-- START BUTTON -->
+  <button
+    id="start-btn"
+    type="button"
+    class="px-4
+           py-1.5
+           bg-[rgba(0,240,255,0.08)]
+           border border-[rgba(0,240,255,0.35)]
+           text-[#00f0ff]
+           font-mono
+           text-xs
+           rounded
+           hover:bg-[#00f0ff]
+           hover:text-black
+           transition-colors"
+  >
+    NEXUS
+  </button>
+
+
+  <!-- NETWORK STATUS -->
+  <div
+    id="net-status"
+    class="flex items-center gap-2
+           text-yellow-400
+           text-[10px]
+           font-mono"
+  >
+    <span
+      class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"
+    ></span>
+    CONNECTING
+  </div>
+
+
+  <!-- SYSTEM CLOCK -->
+  <div
+    id="sys-clock"
+    class="text-[#00f0ff]
+           text-[10px]
+           font-mono"
+  >
+    00:00:00 UTC
+  </div>
+
+
+  <!-- =========================================================
+       ORIGINAL NEXUSCODE WEBSITE
+       ========================================================= -->
+  <div id="nexuscode-site" class="hidden">
+
+    <header class="hero" id="home">
+
+      <nav class="nav container">
+
+        <div class="logo">
+          NexusCode
         </div>
 
-        <!-- Start Menu (Hidden) -->
-        <div id="start-menu" class="absolute bottom-0 left-0 w-64 bg-[var(--window-bg)] border border-[var(--window-border)] border-b-0 rounded-tr-lg hidden z-[9500] flex-col overflow-hidden">
-            <div class="p-4 border-b border-[var(--window-border)] flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-[var(--sys-accent)] flex items-center justify-center text-black font-bold text-xl">N</div>
-                <div>
-                    <div class="font-bold text-white">ROOT OPERATOR</div>
-                    <div class="text-[10px] text-[var(--sys-green)] font-mono">ID: 0x00000000</div>
-                </div>
-            </div>
-            <div class="p-2 space-y-1">
-                <button onclick="OS.WindowManager.openApp('terminal'); OS.toggleStart()" class="w-full text-left px-4 py-2 hover:bg-[var(--sys-accent)] hover:text-black transition-colors rounded">Command Line</button>
-                <button onclick="OS.WindowManager.openApp('monitor'); OS.toggleStart()" class="w-full text-left px-4 py-2 hover:bg-[var(--sys-accent)] hover:text-black transition-colors rounded">System Monitor</button>
-                <button onclick="location.reload()" class="w-full text-left px-4 py-2 text-[var(--sys-red)] hover:bg-[var(--sys-red)] hover:text-white transition-colors rounded">Reboot System</button>
-            </div>
+        <div class="nav-links">
+
+          <a href="#services">
+            Services
+          </a>
+
+          <a href="#about">
+            About
+          </a>
+
+          <a href="#blogs">
+            Blogs
+          </a>
+
+          <a href="#nexus-runner">
+            Nexus Runner
+          </a>
+
+          <a href="#chat">
+            Community Chat
+          </a>
+
         </div>
-    </div>
 
-    <!-- TASKBAR -->
-    <div class="taskbar">
-        <button class="start-btn" onclick="OS.toggleStart()">SYS.START</button>
-        <div class="task-list" id="task-list"></div>
-        <div class="flex items-center gap-4 text-xs font-mono">
-            <span class="text-[var(--sys-green)] flex items-center gap-1"><span class="w-2 h-2 bg-[var(--sys-green)] rounded-full animate-pulse"></span> ONLINE</span>
-            <span id="sys-clock" class="text-white">00:00:00</span>
+      </nav>
+
+
+      <div class="hero-content container">
+
+        <p class="eyebrow">
+          Professional Technology Partner
+        </p>
+
+        <h1>
+          We Build Reliable Software, AI Products, and Secure Digital Platforms.
+        </h1>
+
+        <p>
+          NexusCode helps companies move faster with enterprise-grade engineering,
+          practical AI implementation, and high-performance product delivery.
+        </p>
+
+        <a href="#chat" class="cta">
+          Join Our Public Chat
+        </a>
+
+      </div>
+
+    </header>
+
+
+    <main>
+
+      <!-- SERVICES -->
+      <section
+        class="section container"
+        id="services"
+      >
+
+        <h2>
+          Our Services
+        </h2>
+
+        <div class="grid three">
+
+          <article class="card">
+
+            <h3>
+              Custom Software Development
+            </h3>
+
+            <p>
+              Web platforms, APIs, and cloud-native systems built for scale
+              and maintainability.
+            </p>
+
+          </article>
+
+
+          <article class="card">
+
+            <h3>
+              AI & Automation
+            </h3>
+
+            <p>
+              Applied AI solutions that improve operations, customer experience,
+              and analytics.
+            </p>
+
+          </article>
+
+
+          <article class="card">
+
+            <h3>
+              Cybersecurity Engineering
+            </h3>
+
+            <p>
+              Secure-by-design architecture, compliance readiness,
+              and continuous risk reduction.
+            </p>
+
+          </article>
+
         </div>
-    </div>
 
-    <!-- FIREBASE IMPORT -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
-        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
-        window.FirebaseAPI = { initializeApp, getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp };
-    </script>
+      </section>
 
-    <!-- OS CORE LOGIC -->
-    <script>
-        // ==========================================
-        // VIRTUAL FILE SYSTEM (VFS)
-        // ==========================================
-        class VirtualFS {
-            constructor() {
-                this.tree = {
-                    '': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                        'home': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                            'root': { type: 'dir', perms: 'rwx------', children: {
-                                'secrets.txt': { type: 'file', content: 'ENCRYPTED_PAYLOAD_0x89F', perms: 'rw-------' },
-                                'notes.md': { type: 'file', content: '# Operation Midnight\nTarget acquired.', perms: 'rw-r--r--' }
-                            }},
-                            'guest': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                                'readme.txt': { type: 'file', content: 'Welcome to NexusOS.\nUse terminal to navigate.', perms: 'rw-r--r--' }
-                            }}
-                        }},
-                        'sys': { type: 'dir', perms: 'r-xr-xr-x', children: {
-                            'kernel.log': { type: 'file', content: 'Kernel panic avoided. Memory mapped.', perms: 'r--r--r--' },
-                            'config': { type: 'dir', children: {} }
-                        }},
-                        'bin': { type: 'dir', perms: 'r-xr-xr-x', children: {
-                            'bash': { type: 'exe' }, 'ls': { type: 'exe' }, 'cat': { type: 'exe' }
-                        }}
-                    }}
-                };
-            }
 
-            getNode(path) {
-                if (path === '/') return this.tree[''];
-                const parts = path.split('/').filter(Boolean);
-                let current = this.tree[''];
-                for (let part of parts) {
-                    if (current.type !== 'dir' || !current.children[part]) return null;
-                    current = current.children[part];
-                }
-                return current;
-            }
+      <!-- ABOUT -->
+      <section
+        class="section section-muted"
+        id="about"
+      >
 
-            resolvePath(curr, target) {
-                if (target.startsWith('/')) return target;
-                if (target === '~') return '/home/root';
-                const parts = curr.split('/').filter(Boolean);
-                const targetParts = target.split('/').filter(Boolean);
-                
-                for (let p of targetParts) {
-                    if (p === '..') parts.pop();
-                    else if (p !== '.') parts.push(p);
-                }
-                return '/' + parts.join('/');
-            }
-        }
+        <div class="container about-wrap">
 
-        // ==========================================
-        // WINDOW MANAGER
-        // ==========================================
-        class WindowManager {
-            constructor() {
-                this.desktop = document.getElementById('desktop');
-                this.taskList = document.getElementById('task-list');
-                this.windows = {};
-                this.zIndexCounter = 100;
-                this.dragState = { isDragging: false, winId: null, offsetX: 0, offsetY: 0 };
-                
-                this.bindGlobalEvents();
-                
-                // Define Apps
-                this.apps = {
-                    terminal: { title: 'TTY1 - Terminal', width: 600, height: 400, render: this.renderTerminal },
-                    monitor: { title: 'Sys_Telemetry', width: 500, height: 350, render: this.renderMonitor },
-                    chat: { title: 'Global Relay', width: 450, height: 500, render: this.renderChat },
-                    files: { title: 'VFS Explorer', width: 500, height: 400, render: this.renderFiles }
-                };
-            }
+          <div>
 
-            bindGlobalEvents() {
-                document.addEventListener('mousemove', e => this.handleDrag(e));
-                document.addEventListener('mouseup', () => this.dragState.isDragging = false);
-            }
+            <h2>
+              About NexusCode
+            </h2>
 
-            openApp(appId) {
-                const id = `${appId}_${Date.now()}`;
-                const app = this.apps[appId];
-                if (!app) return;
+            <p>
+              We are a professional company focused on creating digital
+              products that combine design quality, technical excellence,
+              and business impact.
+            </p>
 
-                // Create Window DOM
-                const win = document.createElement('div');
-                win.className = 'sys-window';
-                win.id = id;
-                win.style.width = `${app.width}px`;
-                win.style.height = `${app.height}px`;
-                
-                // Cascade positioning
-                const offset = Object.keys(this.windows).length * 30;
-                win.style.left = `${100 + offset}px`;
-                win.style.top = `${50 + offset}px`;
-                win.style.zIndex = ++this.zIndexCounter;
+            <p>
+              Our multidisciplinary teams collaborate with startups,
+              enterprises, and public-sector organizations to deliver
+              modern systems that are fast, secure, and future-ready.
+            </p>
 
-                win.innerHTML = `
-                    <div class="win-header" onmousedown="OS.WindowManager.startDrag(event, '${id}')">
-                        <div class="flex items-center gap-2 text-white">
-                            <span class="w-2 h-2 rounded-full bg-[var(--sys-accent)] animate-pulse"></span>
-                            ${app.title}
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="OS.WindowManager.minimize('${id}')" class="w-3 h-3 bg-yellow-500 rounded-full hover:bg-yellow-400"></button>
-                            <button onclick="OS.WindowManager.maximize('${id}')" class="w-3 h-3 bg-green-500 rounded-full hover:bg-green-400"></button>
-                            <button onclick="OS.WindowManager.close('${id}')" class="w-3 h-3 bg-red-500 rounded-full hover:bg-red-400"></button>
-                        </div>
-                    </div>
-                    <div class="win-content" id="content_${id}"></div>
-                `;
+          </div>
 
-                win.onmousedown = () => this.focus(id);
-                this.desktop.appendChild(win);
-                
-                // Create Taskbar Item
-                const task = document.createElement('div');
-                task.className = 'task-item active';
-                task.id = `task_${id}`;
-                task.innerHTML = `<span class="w-2 h-2 bg-[var(--sys-accent)]"></span> ${app.title.split(' ')[0]}`;
-                task.onclick = () => this.toggleMinimize(id);
-                this.taskList.appendChild(task);
 
-                // Register & Render Content
-                const contentNode = document.getElementById(`content_${id}`);
-                this.windows[id] = { dom: win, taskDom: task, minimized: false, maximized: false, oldRect: null };
-                
-                app.render.call(this, id, contentNode);
-                this.focus(id);
-            }
+          <ul class="stats">
 
-            focus(id) {
-                if(!this.windows[id]) return;
-                this.windows[id].dom.style.zIndex = ++this.zIndexCounter;
-                Object.values(this.windows).forEach(w => w.taskDom.classList.remove('active'));
-                this.windows[id].taskDom.classList.add('active');
-            }
+            <li>
+              <strong>100+</strong>
+              <span>Projects Delivered</span>
+            </li>
 
-            startDrag(e, id) {
-                if (this.windows[id].maximized || e.target.tagName === 'BUTTON') return;
-                this.focus(id);
-                const rect = this.windows[id].dom.getBoundingClientRect();
-                this.dragState = { isDragging: true, winId: id, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top };
-            }
+            <li>
+              <strong>98%</strong>
+              <span>Client Satisfaction</span>
+            </li>
 
-            handleDrag(e) {
-                if (!this.dragState.isDragging) return;
-                const win = this.windows[this.dragState.winId].dom;
-                win.style.left = `${e.clientX - this.dragState.offsetX}px`;
-                win.style.top = `${e.clientY - this.dragState.offsetY}px`;
-            }
+            <li>
+              <strong>24/7</strong>
+              <span>Engineering Support</span>
+            </li>
 
-            minimize(id) {
-                this.windows[id].minimized = true;
-                this.windows[id].dom.classList.add('minimized');
-                this.windows[id].taskDom.classList.remove('active');
-            }
+          </ul>
 
-            toggleMinimize(id) {
-                if (this.windows[id].minimized) {
-                    this.windows[id].minimized = false;
-                    this.windows[id].dom.classList.remove('minimized');
-                    this.focus(id);
-                } else {
-                    if (this.windows[id].dom.style.zIndex == this.zIndexCounter) this.minimize(id);
-                    else this.focus(id);
-                }
-            }
+        </div>
 
-            maximize(id) {
-                const win = this.windows[id];
-                if (win.maximized) {
-                    win.dom.classList.remove('maximized');
-                    win.dom.style.left = win.oldRect.left; win.dom.style.top = win.oldRect.top;
-                    win.maximized = false;
-                } else {
-                    win.oldRect = { left: win.dom.style.left, top: win.dom.style.top };
-                    win.dom.classList.add('maximized');
-                    win.maximized = true;
-                }
-            }
+      </section>
 
-            close(id) {
-                this.windows[id].dom.remove();
-                this.windows[id].taskDom.remove();
-                delete this.windows[id];
-            }
 
-            // --- APP RENDERS ---
-            renderTerminal(id, container) {
-                container.innerHTML = `
-                    <div id="term-out-${id}" class="term-container">
-                        <div class="text-[var(--sys-accent)] mb-2">Nexus_OS Terminal v4.0<br>Type 'help' for commands.</div>
-                    </div>
-                    <form id="term-form-${id}" class="term-input-line">
-                        <span class="text-[var(--sys-green)] font-bold mr-2" id="prompt-${id}">root@nexus:~#</span>
-                        <input type="text" id="term-inp-${id}" class="term-input" autocomplete="off" spellcheck="false">
-                    </form>
-                `;
-                
-                const out = document.getElementById(`term-out-${id}`);
-                const inp = document.getElementById(`term-inp-${id}`);
-                const form = document.getElementById(`term-form-${id}`);
-                const prompt = document.getElementById(`prompt-${id}`);
-                let cwd = '/home/root';
-                let history = [], hIdx = -1;
+      <!-- BLOGS -->
+      <section
+        class="section container"
+        id="blogs"
+      >
 
-                const print = (html) => { out.innerHTML += `<div>${html}</div>`; out.scrollTop = out.scrollHeight; };
-                const escape = (s) => s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+        <div class="section-header">
 
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    const cmd = inp.value.trim();
-                    if(!cmd) return;
-                    
-                    print(`<span class="text-[var(--sys-green)]">root@nexus:${cwd}#</span> <span class="text-white">${escape(cmd)}</span>`);
-                    history.push(cmd); hIdx = history.length;
-                    
-                    const args = cmd.split(' ').filter(Boolean);
-                    const root = args[0].toLowerCase();
+          <h2>
+            Latest Blogs
+          </h2>
 
-                    try {
-                        switch(root) {
-                            case 'help':
-                                print(`Commands: <span class="text-[var(--sys-accent)]">ls, cd, pwd, cat, mkdir, echo, clear, whoami, neofetch</span>`);
-                                break;
-                            case 'clear': out.innerHTML = ''; break;
-                            case 'pwd': print(cwd); break;
-                            case 'whoami': print('root'); break;
-                            case 'neofetch':
-                                print(`<div class="flex gap-4 text-[var(--sys-accent)] mt-2">
-                                        <pre>   /\\   \n  /  \\  \n /____\\ \n/      \\</pre>
-                                        <div class="text-gray-300"><span class="text-white font-bold">root@nexus</span><br>OS: NexusOS 4.0<br>Kernel: 8.9.1<br>Shell: nx-bash<br>Mem: 2048MiB / 65536MiB</div>
-                                      </div>`);
-                                break;
-                            case 'ls':
-                                const target = args[1] ? OS.VFS.resolvePath(cwd, args[1]) : cwd;
-                                const node = OS.VFS.getNode(target);
-                                if (!node) print(`ls: cannot access '${target}': No such file or directory`);
-                                else if (node.type !== 'dir') print(args[1]);
-                                else {
-                                    const files = Object.keys(node.children).map(k => {
-                                        const color = node.children[k].type === 'dir' ? 'text-[var(--sys-accent)] font-bold' : 'text-white';
-                                        return `<span class="${color}">${k}</span>`;
-                                    });
-                                    print(`<div class="grid grid-cols-3 gap-2">${files.join('')}</div>`);
-                                }
-                                break;
-                            case 'cd':
-                                const newPath = args[1] ? OS.VFS.resolvePath(cwd, args[1]) : '/home/root';
-                                const nNode = OS.VFS.getNode(newPath);
-                                if (!nNode) print(`cd: ${args[1]}: No such file or directory`);
-                                else if (nNode.type !== 'dir') print(`cd: ${args[1]}: Not a directory`);
-                                else { cwd = newPath; prompt.textContent = `root@nexus:${cwd === '/home/root' ? '~' : cwd}#`; }
-                                break;
-                            case 'cat':
-                                if (!args[1]) return print('cat: missing operand');
-                                const fPath = OS.VFS.resolvePath(cwd, args[1]);
-                                const fNode = OS.VFS.getNode(fPath);
-                                if (!fNode) print(`cat: ${args[1]}: No such file or directory`);
-                                else if (fNode.type === 'dir') print(`cat: ${args[1]}: Is a directory`);
-                                else print(`<pre class="text-gray-300 font-mono">${escape(fNode.content)}</pre>`);
-                                break;
-                            case 'mkdir':
-                                if(!args[1]) return print('mkdir: missing operand');
-                                const pNode = OS.VFS.getNode(cwd);
-                                if(pNode.children[args[1]]) print(`mkdir: cannot create directory '${args[1]}': File exists`);
-                                else pNode.children[args[1]] = { type: 'dir', children: {}, perms: 'rwxr-xr-x' };
-                                break;
-                            case 'echo':
-                                if(args.length > 2 && args[args.length-2] === '>') {
-                                    const fname = args[args.length-1];
-                                    const text = args.slice(1, -2).join(' ');
-                                    const dirNode = OS.VFS.getNode(cwd);
-                                    dirNode.children[fname] = { type: 'file', content: text, perms: 'rw-r--r--' };
-                                } else {
-                                    print(args.slice(1).join(' '));
-                                }
-                                break;
-                            default: print(`nx-bash: ${escape(root)}: command not found`);
-                        }
-                    } catch (err) { print(`<span class="text-[var(--sys-red)]">ERR: ${err.message}</span>`); }
-                    
-                    inp.value = '';
-                };
+          <p>
+            Insights from our team on software, AI, security,
+            and digital growth.
+          </p>
 
-                inp.onkeydown = (e) => {
-                    if (e.key === 'ArrowUp') { e.preventDefault(); if (hIdx > 0) inp.value = history[--hIdx]; }
-                    else if (e.key === 'ArrowDown') { e.preventDefault(); if (hIdx < history.length - 1) inp.value = history[++hIdx]; else { hIdx = history.length; inp.value = ''; } }
-                };
-                setTimeout(() => inp.focus(), 100);
-            }
+        </div>
 
-            renderMonitor(id, container) {
-                container.innerHTML = `
-                    <div class="p-4 h-full bg-[var(--sys-bg)] flex flex-col gap-4 overflow-y-auto">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="border border-[var(--window-border)] p-3 bg-black/50 rounded">
-                                <div class="text-xs text-[var(--sys-accent)] mb-2 font-mono">CPU MATRIX [ <span id="cpu-val-${id}">0</span>% ]</div>
-                                <canvas id="cpu-canv-${id}" width="200" height="60" class="w-full"></canvas>
-                            </div>
-                            <div class="border border-[var(--window-border)] p-3 bg-black/50 rounded">
-                                <div class="text-xs text-[var(--sys-purple)] mb-2 font-mono">MEM ALLOC [ <span id="ram-val-${id}">0</span>GB ]</div>
-                                <canvas id="ram-canv-${id}" width="200" height="60" class="w-full"></canvas>
-                            </div>
-                        </div>
-                        <div class="border border-[var(--window-border)] p-3 bg-black/50 rounded flex-1 flex flex-col">
-                            <div class="text-xs text-[var(--sys-green)] mb-2 font-mono">NETWORK I/O</div>
-                            <div id="net-bars-${id}" class="flex-1 flex items-end gap-1"></div>
-                        </div>
-                    </div>
-                `;
+        <div
+          id="blog-list"
+          class="grid three"
+        ></div>
 
-                // Canvas logic
-                const drawGraph = (ctx, data, color) => {
-                    ctx.clearRect(0, 0, 200, 60);
-                    ctx.beginPath(); ctx.moveTo(0, 60);
-                    data.forEach((val, i) => ctx.lineTo(i * (200 / 20), 60 - (val / 100) * 60));
-                    ctx.lineTo(200, 60); ctx.fillStyle = color; ctx.fill();
-                    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();
-                };
+      </section>
 
-                const cpuCtx = document.getElementById(`cpu-canv-${id}`).getContext('2d');
-                const ramCtx = document.getElementById(`ram-canv-${id}`).getContext('2d');
-                const netBox = document.getElementById(`net-bars-${id}`);
-                
-                let cpuData = Array(20).fill(0), ramData = Array(20).fill(0);
 
-                const interval = setInterval(() => {
-                    if(!document.getElementById(`cpu-canv-${id}`)) { clearInterval(interval); return; } // Cleanup on close
-                    
-                    const cpu = Math.floor(Math.random() * 80) + 20;
-                    const ram = Math.floor(Math.random() * 40) + 10;
-                    
-                    cpuData.shift(); cpuData.push(cpu);
-                    ramData.shift(); ramData.push(ram);
-                    
-                    document.getElementById(`cpu-val-${id}`).innerText = cpu;
-                    document.getElementById(`ram-val-${id}`).innerText = (ram * 64 / 100).toFixed(1);
-                    
-                    drawGraph(cpuCtx, cpuData, 'rgba(0, 240, 255, 0.4)');
-                    drawGraph(ramCtx, ramData, 'rgba(176, 0, 255, 0.4)');
+      <!-- NEXUS RUNNER -->
+      <section
+        class="section game-section"
+        id="nexus-runner"
+      >
 
-                    // Network bars
-                    netBox.innerHTML = Array(30).fill(0).map(() => `<div class="w-full bg-[var(--sys-green)] opacity-70 transition-all duration-300" style="height: ${Math.random()*100}%"></div>`).join('');
-                }, 1000);
-            }
+        <div class="container game-wrap">
 
-            renderChat(id, container) {
-                container.innerHTML = `
-                    <div class="flex flex-col h-full bg-[#020204]">
-                        <div class="p-3 border-b border-[var(--window-border)] flex items-center justify-between">
-                            <span class="text-xs font-mono text-[var(--sys-accent)]">GLOBAL_RELAY_v2</span>
-                            <div class="text-[10px] text-white flex gap-2">
-                                ID: <input id="chat-name-${id}" class="bg-black border border-gray-700 px-1 text-[var(--sys-accent)] w-24 outline-none" value="ROOT">
-                            </div>
-                        </div>
-                        <div id="chat-msgs-${id}" class="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-[11px]"></div>
-                        <form id="chat-form-${id}" class="p-2 border-t border-[var(--window-border)] flex gap-2">
-                            <input id="chat-inp-${id}" type="text" class="flex-1 bg-black border border-[var(--window-border)] text-white px-2 py-1 outline-none focus:border-[var(--sys-green)]" placeholder="Transmit...">
-                            <button class="bg-[var(--sys-accent)] text-black px-4 font-bold uppercase text-xs hover:bg-white transition-colors">TX</button>
-                        </form>
-                    </div>
-                `;
+          <div class="section-header game-header">
 
-                const out = document.getElementById(`chat-msgs-${id}`);
-                const form = document.getElementById(`chat-form-${id}`);
-                const inp = document.getElementById(`chat-inp-${id}`);
-                const nameInp = document.getElementById(`chat-name-${id}`);
+            <div>
 
-                if(!window.FirebaseAPI) {
-                    out.innerHTML = `<span class="text-[var(--sys-red)]">ERR: Network stack missing Firebase modules.</span>`;
-                    return;
-                }
+              <p class="eyebrow">
+                Interactive Experience
+              </p>
 
-                try {
-                    const app = window.FirebaseAPI.initializeApp({
-                        apiKey: 'AIzaSyBm5k1wF7-RaC8hEtTy2Phznxey0FnAcsU',
-                        projectId: 'basket-clash-7901c'
-                    });
-                    const db = window.FirebaseAPI.getFirestore(app);
-                    const ref = window.FirebaseAPI.collection(db, 'messages');
+              <h2>
+                Nexus Runner
+              </h2>
 
-                    window.FirebaseAPI.onSnapshot(window.FirebaseAPI.query(ref, window.FirebaseAPI.orderBy('createdAt', 'asc'), window.FirebaseAPI.limit(50)), (snap) => {
-                        out.innerHTML = '';
-                        snap.forEach(doc => {
-                            const d = doc.data();
-                            const isMe = d.name === nameInp.value.trim();
-                            const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString([], {hour12:false}) : 'NOW';
-                            out.innerHTML += `
-                                <div class="${isMe ? 'ml-8 bg-[rgba(0,240,255,0.05)] border-r-2 border-[var(--sys-accent)]' : 'mr-8 bg-black border-l-2 border-gray-600'} p-2 rounded">
-                                    <div class="flex justify-between text-[9px] mb-1">
-                                        <span class="${isMe ? 'text-[var(--sys-accent)]' : 'text-gray-400'}">${this.escapeHTML(d.name || 'ANON')}</span>
-                                        <span class="text-gray-600">[${time}]</span>
-                                    </div>
-                                    <div class="text-gray-300 text-[12px] break-words">${this.escapeHTML(d.text)}</div>
-                                </div>
-                            `;
-                        });
-                        out.scrollTop = out.scrollHeight;
-                    });
+              <p>
+                A futuristic browser game inspired by Chrome Dino,
+                upgraded with neon visuals, shields, drones,
+                and progressive speed.
+              </p>
 
-                    form.onsubmit = async (e) => {
-                        e.preventDefault();
-                        if(!inp.value.trim()) return;
-                        const txt = inp.value; inp.value = ''; inp.disabled = true;
-                        try {
-                            await window.FirebaseAPI.addDoc(ref, { name: nameInp.value.trim() || 'ROOT', text: txt, createdAt: window.FirebaseAPI.serverTimestamp() });
-                        } finally { inp.disabled = false; inp.focus(); }
-                    };
-                } catch(e) { out.innerHTML = `<span class="text-[var(--sys-red)]">CONNECTION FAILED: ${e.message}</span>`; }
-            }
+            </div>
 
-            renderFiles(id, container) {
-                container.innerHTML = `
-                    <div class="flex h-full bg-[#050508] font-mono text-xs">
-                        <div class="w-1/3 border-r border-[var(--window-border)] p-2 overflow-y-auto text-gray-400">
-                            <div class="mb-2 font-bold text-white border-b border-gray-800 pb-1">DRIVE_C (root)</div>
-                            <div id="vfs-tree-${id}" class="pl-2 border-l border-gray-800 ml-2 space-y-1"></div>
-                        </div>
-                        <div class="w-2/3 p-4 overflow-y-auto text-white flex flex-col items-center justify-center bg-black/30" id="vfs-content-${id}">
-                            <svg class="w-12 h-12 text-gray-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-                            <span class="text-gray-600">Select a file to view</span>
-                        </div>
-                    </div>
-                `;
 
-                const treeDiv = document.getElementById(`vfs-tree-${id}`);
-                const renderTree = (node, path) => {
-                    let html = '';
-                    for (let key in node.children) {
-                        const child = node.children[key];
-                        const fullPath = path === '/' ? `/${key}` : `${path}/${key}`;
-                        if (child.type === 'dir') {
-                            html += `<div>
-                                <span class="text-[var(--sys-accent)]">📁 ${key}</span>
-                                <div class="pl-2 ml-2 border-l border-gray-800">${renderTree(child, fullPath)}</div>
-                            </div>`;
-                        } else {
-                            html += `<div class="cursor-pointer hover:bg-gray-800 hover:text-white px-1 rounded transition-colors" onclick="OS.WindowManager.viewFile('${id}', '${fullPath}')">📄 ${key}</div>`;
-                        }
-                    }
-                    return html;
-                };
-                treeDiv.innerHTML = renderTree(OS.VFS.tree[''], '/');
-            }
+            <div
+              class="game-scoreboard"
+              aria-live="polite"
+            >
 
-            viewFile(winId, path) {
-                const node = OS.VFS.getNode(path);
-                const out = document.getElementById(`vfs-content-${winId}`);
-                if(!node || node.type !== 'file') return;
-                out.classList.remove('items-center', 'justify-center');
-                out.innerHTML = `
-                    <div class="mb-4 text-[var(--sys-accent)] border-b border-[var(--window-border)] pb-2 flex justify-between">
-                        <span>${path}</span><span class="text-gray-500">${node.perms}</span>
-                    </div>
-                    <pre class="text-gray-300 whitespace-pre-wrap">${this.escapeHTML(node.content)}</pre>
-                `;
-            }
+              <span>
+                Score
+                <strong id="game-score">
+                  0
+                </strong>
+              </span>
 
-            escapeHTML(s) { return s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-        }
+              <span>
+                Best
+                <strong id="game-best">
+                  0
+                </strong>
+              </span>
 
-        // ==========================================
-        // OS CORE ENGINE
-        // ==========================================
-        class NexusCore {
-            constructor() {
-                this.VFS = new VirtualFS();
-                this.WindowManager = new WindowManager();
-                this.initBootSequence();
-                this.initClock();
-                this.initMatrixBg();
-            }
+            </div>
 
-            initBootSequence() {
-                const log = document.getElementById('boot-log');
-                const form = document.getElementById('auth-form');
-                const inp = document.getElementById('auth-pwd');
-                const err = document.getElementById('auth-err');
-                
-                const lines = [
-                    'BIOS Date 09/19/2026 12:37:42 Ver 4.00',
-                    'CPU: Quantum Core x128 @ 4.2THz',
-                    'Memory Testing: 65536 OK',
-                    'Loading Kernel Modules............ OK',
-                    'Mounting VFS (Virtual File System) OK',
-                    'Initializing Graphics Subsystem... OK',
-                    'Awaiting Operator Input...'
-                ];
-                
-                let i = 0;
-                const boot = setInterval(() => {
-                    if (i < lines.length) {
-                        log.innerHTML += `<div>[${(i*0.14).toFixed(3)}] ${lines[i]}</div>`;
-                        log.scrollTop = log.scrollHeight;
-                        i++;
-                    } else clearInterval(boot);
-                }, 300);
+          </div>
 
-                // Code is 2945 (Base64 Mjk0NQ==)
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    if (btoa(inp.value.trim()) === 'Mjk0NQ==') {
-                        document.getElementById('auth').style.opacity = '0';
-                        setTimeout(() => {
-                            document.getElementById('auth').remove();
-                            this.WindowManager.openApp('terminal');
-                        }, 1000);
-                    } else {
-                        err.classList.remove('hidden');
-                        inp.value = '';
-                        document.getElementById('auth').classList.add('bg-red-900/40');
-                        setTimeout(() => document.getElementById('auth').classList.remove('bg-red-900/40'), 200);
-                    }
-                };
-            }
 
-            initClock() {
-                setInterval(() => {
-                    document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString('en-US', {hour12: false}) + ' UTC';
-                }, 1000);
-            }
+          <div class="game-shell">
 
-            toggleStart() {
-                const menu = document.getElementById('start-menu');
-                menu.classList.toggle('hidden');
-                menu.style.display = menu.classList.contains('hidden') ? 'none' : 'flex';
-            }
+            <canvas
+              id="runner-canvas"
+              width="960"
+              height="360"
+              aria-label="Nexus Runner game canvas"
+            ></canvas>
 
-            initMatrixBg() {
-                const c = document.getElementById('matrix-canvas');
-                const ctx = c.getContext('2d');
-                c.width = window.innerWidth; c.height = window.innerHeight;
-                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%\"'#&_(),.;:?!\\|{}<>[]^~".split('');
-                const font_size = 14;
-                const drops = Array(Math.floor(c.width/font_size)).fill(1);
-                
-                setInterval(() => {
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-                    ctx.fillRect(0, 0, c.width, c.height);
-                    ctx.fillStyle = "#0F0"; ctx.font = font_size + "px monospace";
-                    for(let i = 0; i < drops.length; i++) {
-                        const text = chars[Math.floor(Math.random()*chars.length)];
-                        ctx.fillText(text, i*font_size, drops[i]*font_size);
-                        if(drops[i]*font_size > c.height && Math.random() > 0.975) drops[i] = 0;
-                        drops[i]++;
-                    }
-                }, 33);
-            }
-        }
 
-        // Boot the system
-        window.OS = new NexusCore();
-    </script>
+            <div
+              class="game-overlay"
+              id="game-overlay"
+            >
+
+              <strong>
+                Nexus Runner
+              </strong>
+
+              <span>
+                Press Space, ↑, or tap to jump.
+                Press ↓ to phase-slide.
+              </span>
+
+              <button
+                type="button"
+                id="game-start"
+              >
+                Start Mission
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div
+            class="game-controls"
+            aria-label="Game controls"
+          >
+
+            <button
+              type="button"
+              data-game-action="jump"
+            >
+              Jump
+            </button>
+
+            <button
+              type="button"
+              data-game-action="slide"
+            >
+              Phase Slide
+            </button>
+
+            <button
+              type="button"
+              data-game-action="restart"
+            >
+              Restart
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- COMMUNITY CHAT -->
+      <section
+        class="section section-muted"
+        id="chat"
+      >
+
+        <div class="container chat-wrap">
+
+          <div class="section-header">
+
+            <h2>
+              Public Community Chat
+            </h2>
+
+            <p>
+              Anyone can join the conversation, ask questions,
+              and connect with others in real time.
+            </p>
+
+          </div>
+
+
+          <form
+            id="chat-form"
+            class="chat-form"
+          >
+
+            <input
+              id="name-input"
+              type="text"
+              maxlength="24"
+              placeholder="Your name (optional)"
+            />
+
+            <input
+              id="message-input"
+              type="text"
+              maxlength="600"
+              placeholder="Type your message..."
+              required
+            />
+
+            <button type="submit">
+              Send
+            </button>
+
+          </form>
+
+
+          <p
+            id="chat-status"
+            class="chat-status"
+            role="status"
+          >
+            Connecting to live chat...
+          </p>
+
+
+          <div
+            id="chat-messages"
+            class="chat-messages"
+            aria-live="polite"
+          ></div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer class="footer">
+
+      <div class="container">
+
+        <p>
+          © 2026 NexusCode. All rights reserved.
+        </p>
+
+      </div>
+
+    </footer>
+
+  </div>
+
+
+  <!-- =========================================================
+       SCRIPTS
+       ========================================================= -->
+
+  <!-- Socket.IO -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <!-- IMPORTANT:
+       app.js contains Firebase ES module imports,
+       therefore it MUST be loaded as a module.
+  -->
+  <script
+    type="module"
+    src="./app.js"
+  ></script>
+
 </body>
 </html>
