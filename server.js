@@ -1,123 +1,121 @@
+// ==========================================
+// NEXUS_OS CENTRAL SERVER (v4.0 Enterprise)
+// ==========================================
 const express = require('express');
 const http = require('http');
-const path = require('path');
 const { Server } = require('socket.io');
+const path = require('path');
+const crypto = require('crypto');
 
-const MAX_MESSAGES = 200;
-const MAX_MESSAGE_LENGTH = 600;
-const MAX_NAME_LENGTH = 24;
+// Αρχικοποίηση Διακομιστή
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*", methods: ["GET", "POST"] }
+});
 
-const blogPosts = [
-  {
-    id: 'engineering-excellence',
-    title: 'Engineering Excellence at NexusCode',
-    excerpt: 'How we design scalable digital products with speed, quality, and measurable business outcomes.',
-    date: '2026-05-20',
-    author: 'NexusCode Team',
-    content:
-      'At NexusCode, we combine product strategy, software engineering, and modern cloud architecture to deliver reliable digital platforms. Our teams prioritize clarity, testability, and sustainable velocity so clients can scale with confidence.'
-  },
-  {
-    id: 'ai-transformation',
-    title: 'Practical AI Transformation for Modern Companies',
-    excerpt: 'A framework to move from AI experimentation to real production impact.',
-    date: '2026-05-18',
-    author: 'NexusCode Labs',
-    content:
-      'Successful AI initiatives are grounded in clear business goals. We help organizations identify the right use cases, build secure data foundations, and deploy AI-enabled workflows that improve operations, customer experience, and decision-making.'
-  },
-  {
-    id: 'secure-by-design',
-    title: 'Secure-by-Design Delivery',
-    excerpt: 'Why cybersecurity needs to be embedded from day one of software development.',
-    date: '2026-05-14',
-    author: 'Security Practice',
-    content:
-      'Security is not an afterthought at NexusCode. We integrate secure coding practices, infrastructure hardening, and continuous monitoring throughout the delivery lifecycle to reduce risk and protect mission-critical systems.'
-  }
-];
+// Middleware για ασφάλεια και στατικά αρχεία
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'))); // Εξυπηρέτηση του φακέλου public/
 
-const normalizeText = (value, fallback = '') => String(value || fallback).trim();
+// ==========================================
+// SERVER-SIDE STATE (In-Memory VFS & Users)
+// ==========================================
+const activeOperators = new Map();
+let globalMessageHistory = [];
 
-function createApp() {
-  const app = express();
+// Κεντρικό Virtual File System (Προσωρινό πριν τη Βάση Δεδομένων)
+const serverVFS = {
+    '/home/root': { type: 'dir', perms: 'rwx------', children: ['system_logs.txt', 'network_config.json'] },
+    '/sys/kernel': { type: 'dir', perms: 'r-xr-xr-x', children: ['core_dump.log'] },
+    '/public/dropzone': { type: 'dir', perms: 'rwxrwxrwx', children: [] }
+};
 
-  app.disable('x-powered-by');
-  app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'], maxAge: '1h' }));
+// ==========================================
+// WEBSOCKETS (Πραγματικός Χρόνος)
+// ==========================================
+io.on('connection', (socket) => {
+    // Εκχώρηση προσωρινού Session ID
+    const sessionId = crypto.randomBytes(4).toString('hex');
+    activeOperators.set(socket.id, { callsign: `ANON_${sessionId}`, ip: socket.handshake.address });
+    
+    console.log(`[+] UPLINK ESTABLISHED: Socket ${socket.id} (ID: ${sessionId})`);
 
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'nexuscode-site' });
-  });
-
-  app.get('/api/blogs', (_req, res) => {
-    res.json(blogPosts);
-  });
-
-  app.get('/api/blogs/:id', (req, res) => {
-    const post = blogPosts.find((item) => item.id === req.params.id);
-    if (!post) {
-      return res.status(404).json({ message: 'Post not found' });
-    }
-
-    return res.json(post);
-  });
-
-  return app;
-}
-
-function attachRealtimeChat(server, options = {}) {
-  const io = new Server(server, {
-    cors: { origin: false },
-    ...options
-  });
-  const messages = [];
-
-  io.on('connection', (socket) => {
-    socket.emit('chat:history', messages);
-
-    socket.on('chat:message', (payload = {}) => {
-      const trimmedText = normalizeText(payload.text);
-      const sender = normalizeText(payload.name, 'Guest').slice(0, MAX_NAME_LENGTH) || 'Guest';
-
-      if (!trimmedText) {
-        return;
-      }
-
-      const message = {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-        sender,
-        text: trimmedText.slice(0, MAX_MESSAGE_LENGTH),
+    // Αποστολή ιστορικού μηνυμάτων στον νέο χρήστη
+    socket.emit('sys_sync', { history: globalMessageHistory.slice(-50), online: activeOperators.size });
+    
+    // Ειδοποίηση δικτύου για νέα σύνδεση
+    socket.broadcast.emit('net_broadcast', {
+        type: 'system',
+        sender: 'SYS_DAEMON',
+        text: `New operator connected. Active links: ${activeOperators.size}`,
         timestamp: new Date().toISOString()
-      };
-
-      messages.push(message);
-
-      if (messages.length > MAX_MESSAGES) {
-        messages.splice(0, messages.length - MAX_MESSAGES);
-      }
-
-      io.emit('chat:message', message);
     });
-  });
 
-  return io;
-}
+    // 1. Αλλαγή Ταυτότητας (Callsign)
+    socket.on('set_identity', (callsign) => {
+        const cleanName = String(callsign).trim().slice(0, 16).replace(/[^a-zA-Z0-9_-]/g, '');
+        if (cleanName) {
+            const oldName = activeOperators.get(socket.id).callsign;
+            activeOperators.get(socket.id).callsign = cleanName;
+            io.emit('net_broadcast', {
+                type: 'system',
+                sender: 'SYS_DAEMON',
+                text: `Identity sync: [${oldName}] is now recognized as [${cleanName}]`,
+                timestamp: new Date().toISOString()
+            });
+        }
+    });
 
-function createServer() {
-  const app = createApp();
-  const server = http.createServer(app);
-  const io = attachRealtimeChat(server);
+    // 2. Παγκόσμια Εκπομπή (Global Chat/Comms)
+    socket.on('transmit_msg', (payload) => {
+        const operator = activeOperators.get(socket.id);
+        const msgData = {
+            type: 'message',
+            sender: operator.callsign,
+            text: String(payload).trim().slice(0, 250),
+            timestamp: new Date().toISOString()
+        };
 
-  return { app, server, io };
-}
+        if (msgData.text) {
+            globalMessageHistory.push(msgData);
+            if (globalMessageHistory.length > 100) globalMessageHistory.shift(); // Διατήρηση τελευταίων 100
+            io.emit('net_broadcast', msgData); // Αποστολή σε όλους, συμπεριλαμβανομένου του αποστολέα
+        }
+    });
 
-if (require.main === module) {
-  const { server } = createServer();
-  const PORT = process.env.PORT || 3000;
+    // 3. Ερωτήματα Συστήματος Αρχείων (VFS Queries)
+    socket.on('vfs_request', (req, callback) => {
+        const { command, target } = req;
+        if (command === 'ls') {
+            const data = serverVFS[target] || { error: 'Directory not found or access denied.' };
+            callback(data);
+        }
+    });
 
-  server.listen(PORT, () => {
-    console.log(`NexusCode site is running on http://localhost:${PORT}`);
-  });
-}
+    // Αποσύνδεση
+    socket.on('disconnect', () => {
+        const operator = activeOperators.get(socket.id);
+        activeOperators.delete(socket.id);
+        console.log(`[-] UPLINK LOST: ${operator.callsign}`);
+        
+        io.emit('net_broadcast', {
+            type: 'system',
+            sender: 'SYS_DAEMON',
+            text: `Operator ${operator.callsign} disconnected.`,
+            timestamp: new Date().toISOString()
+        });
+    });
+});
 
-module.exports = { createApp, createServer, attachRealtimeChat, blogPosts };
+// ==========================================
+// STARTUP SEQUENCE
+// ==========================================
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`\n========================================`);
+    console.log(`[OK] NEXUS_OS KERNEL BOOTED SUCCESSFULLY`);
+    console.log(`[OK] WEBSOCKET RELAY ACTIVE ON PORT ${PORT}`);
+    console.log(`[OK] SERVING FRONTEND FROM /public`);
+    console.log(`========================================\n`);
+});
