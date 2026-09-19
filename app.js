@@ -143,7 +143,7 @@ async function terminalCommand(raw,print){
     const prefix=state.cwd.endsWith("/")?state.cwd:state.cwd+"/";const items=Object.keys(state.fs).filter(p=>p.startsWith(prefix)&&p!==prefix).map(p=>p.slice(prefix.length).split("/")[0]);
     return [...new Set(items)].join("  ")||"(empty)";
   }
-  if(cmd==="cd"){let p=arg||"/home/operator";if(!p.startsWith("/"))p=state.cwd+"/"+p;p=p.replace(/\\/+/g,"/");if(state.fs[p]===undefined&&!Object.keys(state.fs).some(x=>x.startsWith(p+"/")))return "Error: directory not found";state.cwd=p;return "cwd = "+p}
+  if(cmd==="cd"){let p=arg||"/home/operator";if(!p.startsWith("/"))p=state.cwd+"/"+p;p=p.replace(/\/+/g,"/");if(state.fs[p]===undefined&&!Object.keys(state.fs).some(x=>x.startsWith(p+"/")))return "Error: directory not found";state.cwd=p;return "cwd = "+p}
   if(cmd==="cat"){let p=resolvePath(arg);return state.fs[p]===undefined?"Error: file not found":String(state.fs[p])}
   if(cmd==="touch"){let p=resolvePath(arg);if(!arg)return "Error: filename required";state.fs[p]="";return "created "+p}
   if(cmd==="mkdir"){let p=resolvePath(arg);if(!arg)return "Error: directory required";state.fs[p+"/.dir"]="";return "created "+p}
@@ -154,7 +154,7 @@ async function terminalCommand(raw,print){
   if(cmd==="ping")return "nexus-gateway: 18ms  •  firestore: "+(state.chatReady?"connected":"offline");
   return "Error: command not found — "+cmd;
 }
-function resolvePath(p){if(!p)return state.cwd;if(p.startsWith("/"))return p;return (state.cwd+"/"+p).replace(/\\/+/g,"/")}
+function resolvePath(p){if(!p)return state.cwd;if(p.startsWith("/"))return p;return (state.cwd+"/"+p).replace(/\/+/g,"/")}
 
 function renderFiles(w){
   w.body.innerHTML='<div class="file-layout"><aside class="file-sidebar"><button class="active" data-path="/home/operator">⌂ Home</button><button data-path="/home/operator/documents">▤ Documents</button><button data-path="/home/operator/scripts">⚙ Scripts</button><button data-path="/sys">◇ System</button></aside><div class="file-main"><div class="app-toolbar"><button class="tool-btn" id="new-file-'+w.id+'">+ File</button><button class="tool-btn" id="new-folder-'+w.id+'">+ Folder</button><button class="tool-btn" id="refresh-'+w.id+'">Refresh</button></div><div class="pathbar" id="path-'+w.id+'"></div><div class="file-grid" id="grid-'+w.id+'"></div></div></div>';
