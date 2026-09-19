@@ -172,7 +172,7 @@ function renderFiles(w){
   $("refresh-"+w.id).onclick=()=>render(state.cwd);render("/home/operator");
 }
 function editFile(path){
-  const old=state.fs[path]||"";const w=makeWindow({title:"Editor: "+path.split("/").pop(),icon:"✎"});w.app="editor";addTask(w);
+  const old=state.fs[path]||"";const w=makeWindow("editor");w.title="Editor: "+path.split("/").pop();w.el.querySelector(".title-text").innerHTML='<i class="window-dot"></i>'+esc(w.title);addTask(w);
   w.body.innerHTML='<div class="editor"><div class="app-toolbar"><button class="tool-btn" id="save-editor">Save</button><span class="pathbar">'+esc(path)+'</span></div><textarea>'+esc(old)+'</textarea></div>';
   w.body.querySelector("#save-editor").onclick=()=>{state.fs[path]=w.body.querySelector("textarea").value;toast("File saved",path)};
 }
