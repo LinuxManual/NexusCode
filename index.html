@@ -13,6 +13,20 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <script>
+    window.addEventListener("error", function(e){
+      var boot=document.getElementById("boot");
+      if(boot){
+        boot.classList.remove("hidden");
+        var log=document.getElementById("boot-log");
+        if(log) log.innerHTML += "<div style='color:#fb7185'>BOOT ERROR: "+String(e.message||e.error||"Unknown error").replace(/</g,"&lt;")+"</div>";
+      }
+    });
+    window.addEventListener("unhandledrejection", function(e){
+      var log=document.getElementById("boot-log");
+      if(log) log.innerHTML += "<div style='color:#fbbf24'>RUNTIME WARNING: "+String(e.reason||"Promise rejected").replace(/</g,"&lt;")+"</div>";
+    });
+  </script>
   <div id="boot" class="boot-screen">
     <div class="boot-card">
       <div class="brand-mark">N</div>
