@@ -870,3 +870,157 @@ setTimeout(() => {
         desktopGrid.appendChild(edBtn);
     }
 }, 500); // Περιμένουμε μισό δευτερόλεπτο να χτιστεί το DOM από το Μέρος 3
+// ==============================================================================
+// NEXUS_OS KERNEL - PART 6: FILE MANAGER & TERMINAL
+// ==============================================================================
+
+// --- 3. NEXUS FILE MANAGER APP ---
+window.NexusWM.registerApp('files', {
+    title: 'NEXUS.FS - File Matrix',
+    width: 600,
+    height: 420,
+    render: (winId, container) => {
+        container.innerHTML = `
+            <div class="h-full bg-[#05050a] text-white font-mono text-[13px] flex flex-col">
+                <div class="p-3 border-b border-[rgba(0,240,255,0.3)] flex justify-between items-center">
+                    <span class="text-[#00f0ff] font-bold">ROOT://</span>
+                    <button id="refresh-${winId}" class="px-2 py-1 bg-[#00f0ff] text-black text-xs font-bold hover:bg-white transition">REFRESH</button>
+                </div>
+
+                <div id="file-list-${winId}" class="flex-1 overflow-y-auto p-3 space-y-2">
+                    <!-- Files will be injected dynamically -->
+                </div>
+            </div>
+        `;
+
+        const fileList = document.getElementById(`file-list-${winId}`);
+        const refreshBtn = document.getElementById(`refresh-${winId}`);
+
+        const mockFiles = [
+            { name: 'system.cfg', type: 'config' },
+            { name: 'kernel.log', type: 'log' },
+            { name: 'user-data.json', type: 'data' },
+            { name: 'boot.seq', type: 'exec' },
+            { name: 'readme.txt', type: 'text' }
+        ];
+
+        const renderFiles = () => {
+            fileList.innerHTML = '';
+            mockFiles.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between bg-black/40 px-3 py-2 rounded border border-[rgba(0,240,255,0.2)] hover:border-[#00f0ff] transition cursor-pointer';
+                row.innerHTML = `
+                    <span>${f.name}</span>
+                    <span class="text-gray-400 text-xs">${f.type.toUpperCase()}</span>
+                `;
+                row.onclick = () => alert(`Opening ${f.name}...`);
+                fileList.appendChild(row);
+            });
+        };
+
+        refreshBtn.onclick = renderFiles;
+        renderFiles();
+    }
+});
+
+// --- 4. NEXUS TERMINAL APP ---
+window.NexusWM.registerApp('terminal', {
+    title: 'NEXUS.TERMINAL - Quantum Shell',
+    width: 640,
+    height: 380,
+    render: (winId, container) => {
+        container.innerHTML = `
+            <div class="h-full bg-black text-[#00f0ff] font-mono text-[13px] flex flex-col">
+                <div class="p-2 border-b border-[rgba(0,240,255,0.3)]">
+                    <span class="text-[#00ff41]">QuantumShell v3.2</span>
+                </div>
+
+                <div id="term-output-${winId}" class="flex-1 p-3 overflow-y-auto"></div>
+
+                <form id="term-form-${winId}" class="p-2 flex gap-2 border-t border-[rgba(0,240,255,0.3)]">
+                    <span class="text-[#00f0ff]">></span>
+                    <input id="term-input-${winId}" type="text" class="flex-1 bg-transparent outline-none text-white" autocomplete="off">
+                </form>
+            </div>
+        `;
+
+        const output = document.getElementById(`term-output-${winId}`);
+        const form = document.getElementById(`term-form-${winId}`);
+        const input = document.getElementById(`term-input-${winId}`);
+
+        const print = (msg) => {
+            const line = document.createElement('div');
+            line.textContent = msg;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        print("Welcome to QuantumShell. Type 'help' for commands.");
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            const cmd = input.value.trim();
+            input.value = '';
+
+            print("> " + cmd);
+
+            switch (cmd) {
+                case 'help':
+                    print("Available commands:");
+                    print("help - Show this menu");
+                    print("sysinfo - Display system information");
+                    print("clear - Clear terminal");
+                    break;
+
+                case 'sysinfo':
+                    print("NexusOS Kernel v4.0.5");
+                    print("Status: STABLE");
+                    print("UI Accent: " + getComputedStyle(document.documentElement).getPropertyValue('--sys-accent'));
+                    break;
+
+                case 'clear':
+                    output.innerHTML = '';
+                    break;
+
+                default:
+                    print("Unknown command: " + cmd);
+            }
+        };
+    }
+});
+
+// --- 5. Desktop Icons for File Manager & Terminal ---
+setTimeout(() => {
+    const desktopGrid = document.querySelector('.icon-grid') || document.getElementById('desktop').firstElementChild;
+    if (desktopGrid) {
+
+        // File Manager Icon
+        const fileBtn = document.createElement('div');
+        fileBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
+        fileBtn.onclick = () => window.NexusWM.spawnWindow('files');
+        fileBtn.innerHTML = `
+            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
+                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7h18M3 12h18M3 17h18"></path>
+                </svg>
+            </div>
+            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">Files</span>
+        `;
+
+        // Terminal Icon
+        const termBtn = document.createElement('div');
+        termBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
+        termBtn.onclick = () => window.NexusWM.spawnWindow('terminal');
+        termBtn.innerHTML = `
+            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
+                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3"></path>
+                </svg>
+            </div>
+            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">Terminal</span>
+        `;
+
+        desktopGrid.appendChild(fileBtn);
+        desktopGrid.appendChild(termBtn);
+    }
+}, 600);
