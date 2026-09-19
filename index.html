@@ -13,20 +13,6 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <script>
-    window.addEventListener("error", function(e){
-      var boot=document.getElementById("boot");
-      if(boot){
-        boot.classList.remove("hidden");
-        var log=document.getElementById("boot-log");
-        if(log) log.innerHTML += "<div style='color:#fb7185'>BOOT ERROR: "+String(e.message||e.error||"Unknown error").replace(/</g,"&lt;")+"</div>";
-      }
-    });
-    window.addEventListener("unhandledrejection", function(e){
-      var log=document.getElementById("boot-log");
-      if(log) log.innerHTML += "<div style='color:#fbbf24'>RUNTIME WARNING: "+String(e.reason||"Promise rejected").replace(/</g,"&lt;")+"</div>";
-    });
-  </script>
   <div id="boot" class="boot-screen">
     <div class="boot-card">
       <div class="brand-mark">N</div>
@@ -44,10 +30,10 @@
       <p>Secure interactive workspace</p>
       <form id="auth-form">
         <label>Operator name<input id="auth-user" autocomplete="username" placeholder="Choose a username" maxlength="24" required></label>
-        <label>Access code<input id="auth-pwd" type="password" autocomplete="current-password" placeholder="nexus" required></label>
+        <label>Access code<input id="auth-pwd" type="password" autocomplete="current-password" placeholder="Enter access code" required></label>
         <button class="primary-btn" type="submit">ENTER NEXUSOS</button>
       </form>
-      <small>Demo access code: <b>nexus</b></small>
+      <small>Access code required to enter NexusOS.</small>
       <div id="auth-error" class="error"></div>
     </div>
   </div>
@@ -66,18 +52,14 @@
       <button class="desktop-icon" data-app="settings"><span>⚙</span><b>Settings</b></button>
       <button class="desktop-icon" data-app="company"><span>⌂</span><b>Company</b></button>
     </div>
-
     <div id="windows"></div>
-
     <div id="start-menu" class="start-menu glass hidden">
       <div class="start-head"><div class="brand-mini">N</div><div><b>NexusOS</b><small id="start-user">operator</small></div></div>
       <div class="start-search"><input id="app-search" placeholder="Search apps, commands..."></div>
       <div id="app-list" class="app-list"></div>
       <div class="start-foot"><button data-app="settings">Settings</button><button id="logout-btn">Log out</button></div>
     </div>
-
     <div id="toast-stack" class="toast-stack"></div>
-
     <footer class="taskbar">
       <button id="start-btn" class="start-btn"><span class="brand-mini">N</span></button>
       <div id="task-list" class="task-list"></div>
@@ -86,7 +68,6 @@
       <div id="sys-clock" class="clock"></div>
     </footer>
   </main>
-
   <script type="module" src="./app.js"></script>
 </body>
 </html>
