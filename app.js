@@ -206,7 +206,7 @@ function renderChat(w){
 async function subscribeChat(w){
   const renderMsgs=(msgs)=>{
     const box=$("messages-"+w.id);if(!box)return;box.innerHTML="";
-    msgs.slice(-80).forEach(m=>{const d=document.createElement("div");d.className="message";d.innerHTML='<div class="message-head">'+esc(m.user||"unknown")+" • "+esc(m.time||"")+(m.to&&m.to!=="global"?' • → '+esc(m.to):"")+'</div><div class="message-body">'+esc(m.text||"")+"</div>";box.appendChild(d)});box.scrollTop=box.scrollHeight;
+    msgs.filter(m=>m.to==="global"||!m.to||m.to===state.user||m.user===state.user).slice(-80).forEach(m=>{const d=document.createElement("div");d.className="message";d.innerHTML='<div class="message-head">'+esc(m.user||"unknown")+" • "+esc(m.time||"")+(m.to&&m.to!=="global"?' • → '+esc(m.to):"")+'</div><div class="message-body">'+esc(m.text||"")+"</div>";box.appendChild(d)});box.scrollTop=box.scrollHeight;
   };
   if(state.chatReady&&db){
     const q=query(collection(db,"nexus_messages"),orderBy("createdAt","asc"),limit(100));
@@ -228,9 +228,10 @@ async function initFirebase(){
 }
 async function listUsers(){return "Online now: "+state.user+"\\nRealtime user discovery is enabled inside Comms when Firebase presence is configured."}
 async function sendChat(text,to="global"){
-  const msg={user:state.user,text,to,time:now(),createdAt:serverTimestamp()};
-  if(state.chatReady&&db){try{await addDoc(collection(db,"nexus_messages"),msg);return "sent"}catch(e){toast("Message failed","Firestore rejected the message. Check security rules.","warn");return "Error: message could not be sent"}}
-  const arr=JSON.parse(localStorage.getItem("nexus_chat")||"[]");arr.push({...msg,createdAt:Date.now()});localStorage.setItem("nexus_chat",JSON.stringify(arr.slice(-100)));return "sent locally";
+  if(!text)return "Error: empty message";
+  const base={user:state.user,text,to,time:now()};
+  if(state.chatReady&&db){try{await addDoc(collection(db,"nexus_messages"),{...base,createdAt:serverTimestamp()});return "sent"}catch(e){toast("Message failed","Firestore rejected the message. Check security rules.","warn");return "Error: message could not be sent"}}
+  const arr=JSON.parse(localStorage.getItem("nexus_chat")||"[]");arr.push({...base,createdAt:Date.now()});localStorage.setItem("nexus_chat",JSON.stringify(arr.slice(-100)));return "sent locally";
 }
 async function sendDirect(user,text){
   if(user===state.user)return "Error: choose another user";
