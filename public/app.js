@@ -693,3 +693,180 @@ document.addEventListener('DOMContentLoaded', () => {
     initDesktop();
     initBootSequence();
 });
+// ==============================================================================
+// NEXUS_OS KERNEL - PART 4: VFS EXPLORER & TEXT EDITOR
+// ==============================================================================
+
+// --- 1. GUI FILE EXPLORER ---
+window.NexusWM.registerApp('explorer', {
+    title: 'SYS.FILES - File Manager',
+    width: 600,
+    height: 400,
+    render: (winId, container) => {
+        container.innerHTML = `
+            <div class="flex flex-col h-full bg-[#05050a] font-mono text-[13px] select-none">
+                <!-- Address Bar -->
+                <div class="flex items-center gap-2 p-2 bg-black border-b border-[rgba(0,240,255,0.3)]">
+                    <button id="exp-up-${winId}" class="px-2 py-1 bg-[rgba(0,240,255,0.1)] hover:bg-[#00f0ff] hover:text-black transition-colors text-[#00f0ff] border border-[rgba(0,240,255,0.3)]" title="Up Directory">↑ UP</button>
+                    <input type="text" id="exp-path-${winId}" class="flex-1 bg-transparent border border-[rgba(0,240,255,0.3)] text-white px-2 py-1 outline-none focus:border-[#00ff41]" value="/home/operator" readonly>
+                </div>
+                <!-- File Grid -->
+                <div id="exp-grid-${winId}" class="flex-1 overflow-y-auto p-4 grid grid-cols-4 md:grid-cols-5 gap-4 content-start">
+                    <!-- Files injected by JS -->
+                </div>
+                <!-- Status Bar -->
+                <div id="exp-status-${winId}" class="p-1 px-3 bg-black border-t border-[rgba(0,240,255,0.3)] text-gray-500 text-[11px]">
+                    Ready.
+                </div>
+            </div>
+        `;
+
+        const pathInput = document.getElementById(`exp-path-${winId}`);
+        const grid = document.getElementById(`exp-grid-${winId}`);
+        const upBtn = document.getElementById(`exp-up-${winId}`);
+        const status = document.getElementById(`exp-status-${winId}`);
+        let currentPath = '/home/operator';
+
+        const renderGrid = (path) => {
+            const node = window.NexusVFS.getNode(path);
+            if (!node || node.type !== 'dir') {
+                status.textContent = `ERR: Path '${path}' is invalid.`;
+                return;
+            }
+            currentPath = path;
+            pathInput.value = currentPath;
+            grid.innerHTML = '';
+            
+            const entries = Object.keys(node.children);
+            status.textContent = `${entries.length} object(s) found.`;
+
+            if (entries.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center text-gray-600 mt-10">Directory is empty.</div>`;
+                return;
+            }
+
+            entries.forEach(name => {
+                const item = node.children[name];
+                const isDir = item.type === 'dir';
+                const icon = isDir 
+                    ? `<svg class="w-10 h-10 text-[#00f0ff]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
+                    : `<svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
+
+                const el = document.createElement('div');
+                el.className = 'flex flex-col items-center justify-center cursor-pointer hover:bg-[rgba(0,240,255,0.1)] p-2 rounded transition-colors group';
+                el.innerHTML = `${icon}<span class="text-white text-xs mt-2 truncate w-full text-center group-hover:text-[#00f0ff]">${name}</span>`;
+                
+                // Double click action
+                el.ondblclick = () => {
+                    const newPath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
+                    if (isDir) {
+                        renderGrid(newPath);
+                    } else {
+                        // Άνοιγμα του Text Editor με το αρχείο
+                        window.NexusWM.spawnWindow('editor', { path: newPath, name: name });
+                    }
+                };
+                grid.appendChild(el);
+            });
+        };
+
+        upBtn.onclick = () => {
+            if (currentPath === '/') return;
+            const parts = currentPath.split('/').filter(Boolean);
+            parts.pop();
+            renderGrid('/' + parts.join('/'));
+        };
+
+        // Αρχικό Render
+        renderGrid(currentPath);
+    }
+});
+
+// --- 2. TEXT EDITOR APP ---
+window.NexusWM.registerApp('editor', {
+    title: 'NEXUS.EDIT',
+    width: 550,
+    height: 450,
+    render: (winId, container, args) => {
+        const filePath = args?.path || null;
+        let fileNode = null;
+        let initialContent = '';
+
+        if (filePath) {
+            fileNode = window.NexusVFS.getNode(filePath);
+            if (fileNode && fileNode.type === 'file') {
+                initialContent = fileNode.content;
+            }
+        }
+
+        container.innerHTML = `
+            <div class="flex flex-col h-full bg-[#05050a] font-mono text-[13px]">
+                <!-- Toolbar -->
+                <div class="flex items-center gap-2 p-2 bg-black border-b border-[rgba(0,240,255,0.3)]">
+                    <button id="edit-save-${winId}" class="px-3 py-1 bg-[#00f0ff] text-black font-bold hover:bg-white transition-colors text-xs">SAVE</button>
+                    <span class="text-gray-500 text-xs flex-1 truncate" id="edit-path-${winId}">${filePath || 'Untitled.txt'}</span>
+                    <span class="text-[#00ff41] text-[10px] hidden" id="edit-status-${winId}">SAVED ✔</span>
+                </div>
+                <!-- Text Area -->
+                <textarea id="edit-area-${winId}" class="flex-1 bg-transparent text-gray-300 p-4 outline-none resize-none font-mono text-[14px] leading-relaxed selection:bg-[#00f0ff] selection:text-black" spellcheck="false">${initialContent}</textarea>
+            </div>
+        `;
+
+        const saveBtn = document.getElementById(`edit-save-${winId}`);
+        const area = document.getElementById(`edit-area-${winId}`);
+        const status = document.getElementById(`edit-status-${winId}`);
+        const pathDisplay = document.getElementById(`edit-path-${winId}`);
+
+        saveBtn.onclick = () => {
+            const newContent = area.value;
+            let targetPath = filePath;
+
+            // Αν είναι νέο αρχείο που δεν έχει σωθεί
+            if (!targetPath) {
+                const fileName = prompt("Enter filename (e.g. script.js):", "new_file.txt");
+                if (!fileName) return;
+                targetPath = `/home/operator/${fileName}`;
+                pathDisplay.textContent = targetPath;
+            }
+
+            try {
+                window.NexusVFS.writeFile(targetPath, newContent, true); // True = overwrite
+                status.classList.remove('hidden');
+                setTimeout(() => status.classList.add('hidden'), 2000);
+            } catch (e) {
+                alert("Error saving file: " + e.message);
+            }
+        };
+    }
+});
+
+// Προσθήκη εικονιδίων στην επιφάνεια εργασίας (Δυναμικά)
+setTimeout(() => {
+    const desktopGrid = document.querySelector('.icon-grid') || document.getElementById('desktop').firstElementChild;
+    if (desktopGrid) {
+        // Εικονίδιο Explorer
+        const expBtn = document.createElement('div');
+        expBtn.className = 'flex flex-col items-center justify-center cursor-pointer group';
+        expBtn.onclick = () => window.NexusWM.spawnWindow('explorer');
+        expBtn.innerHTML = `
+            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
+                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+            </div>
+            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">SysFiles</span>
+        `;
+        
+        // Εικονίδιο Editor
+        const edBtn = document.createElement('div');
+        edBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
+        edBtn.onclick = () => window.NexusWM.spawnWindow('editor');
+        edBtn.innerHTML = `
+            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
+                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+            </div>
+            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">NexusEdit</span>
+        `;
+        
+        desktopGrid.appendChild(expBtn);
+        desktopGrid.appendChild(edBtn);
+    }
+}, 500); // Περιμένουμε μισό δευτερόλεπτο να χτιστεί το DOM από το Μέρος 3
