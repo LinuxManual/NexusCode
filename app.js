@@ -1,6 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+let initializeApp,getFirestore,collection,addDoc,query,orderBy,limit,onSnapshot,serverTimestamp,getAuth,signInAnonymously;
 
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyBm5k1wF7-RaC8hEtTy2Phznxey0FnAcsU",
@@ -12,7 +10,7 @@ const FIREBASE_CONFIG = {
 };
 
 const APPS = {
-  terminal:{title:"Nexus Terminal",icon:"⌁"},files:{title:"File Manager",icon:"▣"},browser:{title:"Nexus Browser",icon:"◉"},
+  terminal:{title:"Nexus Terminal",icon:"⌁"},files:{title:"File Manager",icon:"▣"},editor:{title:"Text Editor",icon:"✎"},browser:{title:"Nexus Browser",icon:"◉"},
   monitor:{title:"System Monitor",icon:"⌁"},security:{title:"Security Center",icon:"◇"},chat:{title:"Nexus Comms",icon:"◌"},
   ai:{title:"Nexus AI",icon:"✦"},runner:{title:"Nexus Runner",icon:"▶"},settings:{title:"Settings",icon:"⚙"},company:{title:"NexusCode",icon:"⌂"}
 };
@@ -222,6 +220,14 @@ function updateOnline(w){
 }
 async function initFirebase(){
   try{
+    const [fbApp,fbStore,fbAuth]=await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js")
+    ]);
+    ({initializeApp}=fbApp);
+    ({getFirestore,collection,addDoc,query,orderBy,limit,onSnapshot,serverTimestamp}=fbStore);
+    ({getAuth,signInAnonymously}=fbAuth);
     const app=initializeApp(FIREBASE_CONFIG);db=getFirestore(app);auth=getAuth(app);
     await signInAnonymously(auth);state.chatReady=true;$("net-label").textContent="FIREBASE ONLINE";toast("Comms connected","Realtime terminal chat is available.");
   }catch(e){state.chatReady=false;$("net-label").textContent="LOCAL MODE";toast("Realtime unavailable","Chat is using local fallback until Firebase rules/auth are available.","warn")}
@@ -230,7 +236,7 @@ async function listUsers(){return "Online now: "+state.user+"\\nRealtime user di
 async function sendChat(text,to="global"){
   if(!text)return "Error: empty message";
   const base={user:state.user,text,to,time:now()};
-  if(state.chatReady&&db){try{await addDoc(collection(db,"nexus_messages"),{...base,createdAt:serverTimestamp()});return "sent"}catch(e){toast("Message failed","Firestore rejected the message. Check security rules.","warn");return "Error: message could not be sent"}}
+  if(state.chatReady&&db&&addDoc){try{await addDoc(collection(db,"nexus_messages"),{...base,createdAt:serverTimestamp()});return "sent"}catch(e){toast("Message failed","Firestore rejected the message. Check security rules.","warn");return "Error: message could not be sent"}}
   const arr=JSON.parse(localStorage.getItem("nexus_chat")||"[]");arr.push({...base,createdAt:Date.now()});localStorage.setItem("nexus_chat",JSON.stringify(arr.slice(-100)));return "sent locally";
 }
 async function sendDirect(user,text){
