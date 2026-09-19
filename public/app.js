@@ -284,3 +284,258 @@ class WindowManager {
 // Αρχικοποίηση Πυρήνα
 window.NexusVFS = new VirtualFileSystem();
 window.NexusWM = new WindowManager();
+// ==============================================================================
+// NEXUS_OS KERNEL - PART 2: TERMINAL ENGINE & TELEMETRY MONITOR
+// ==============================================================================
+
+// --- 1. THE TERMINAL APP (Command Line Interface) ---
+window.NexusWM.registerApp('terminal', {
+    title: 'TTY1 - Global Terminal',
+    width: 650,
+    height: 450,
+    render: (winId, container) => {
+        container.innerHTML = `
+            <div id="term-out-${winId}" class="flex-1 bg-[rgba(2,2,5,0.95)] text-[#00f0ff] p-4 overflow-y-auto font-mono text-[13px] leading-relaxed select-text">
+                <div class="mb-4 text-[#00ff41]">
+                    NexusOS Core v4.0 - Global Access Terminal<br>
+                    Type <span class="text-white font-bold">'help'</span> for a list of executables.
+                </div>
+            </div>
+            <form id="term-form-${winId}" class="bg-black border-t border-[rgba(0,240,255,0.3)] p-3 flex font-mono text-[13px]">
+                <span id="prompt-${winId}" class="text-[#00ff41] font-bold mr-2 shadow-[#00ff41]">operator@nexus:~$</span>
+                <input type="text" id="term-inp-${winId}" class="flex-1 bg-transparent text-white outline-none" autocomplete="off" spellcheck="false">
+            </form>
+        `;
+
+        const out = document.getElementById(`term-out-${winId}`);
+        const inp = document.getElementById(`term-inp-${winId}`);
+        const form = document.getElementById(`term-form-${winId}`);
+        const prompt = document.getElementById(`prompt-${winId}`);
+
+        let cwd = '/home/operator';
+        let history = [];
+        let hIdx = -1;
+
+        const print = (html) => {
+            out.innerHTML += `<div class="mb-1">${html}</div>`;
+            out.scrollTop = out.scrollHeight;
+        };
+        const escape = (s) => s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+        // Firebase: Ακρόαση για νέα μηνύματα (Global Chat)
+        const chatRef = window.NexusCloud.collection(window.NexusCloud.db, 'messages');
+        const chatQuery = window.NexusCloud.query(chatRef, window.NexusCloud.orderBy('createdAt', 'desc'), window.NexusCloud.limit(1));
+        let isFirstLoad = true;
+
+        const unsubscribe = window.NexusCloud.onSnapshot(chatQuery, (snap) => {
+            if (isFirstLoad) { isFirstLoad = false; return; } // Αγνόηση του παλιού ιστορικού κατά το άνοιγμα
+            snap.docChanges().forEach(change => {
+                if (change.type === 'added') {
+                    const d = change.doc.data();
+                    const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString([], {hour12:false}) : 'NOW';
+                    print(`<span class="text-gray-500">[${time}]</span> <span class="text-[#00ff41]">NET_RCV</span> &lt;<span class="text-[#b000ff]">${escape(d.name)}</span>&gt; <span class="text-white">${escape(d.text)}</span>`);
+                }
+            });
+        });
+
+        // Αποθήκευση του listener για να κλείσει όταν κλείσει το παράθυρο
+        window.NexusWM.windows[winId].unsubscribeChat = unsubscribe;
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const rawCmd = inp.value.trim();
+            if (!rawCmd) return;
+
+            print(`<span class="text-[#00ff41]">${prompt.textContent}</span> <span class="text-white">${escape(rawCmd)}</span>`);
+            history.push(rawCmd);
+            hIdx = history.length;
+            inp.value = '';
+
+            // Διαχωρισμός εντολής (κρατάει τα strings σε εισαγωγικά ενωμένα)
+            const args = rawCmd.match(/(?:[^\s"]+|"[^"]*")+/g).map(s => s.replace(/(^"|"$)/g, ''));
+            const cmd = args[0].toLowerCase();
+
+            try {
+                switch (cmd) {
+                    case 'help':
+                        print(`Available Modules: <span class="text-white">ls, cd, pwd, mkdir, cat, echo, clear, whoami, msg</span>`);
+                        break;
+                    case 'clear':
+                        out.innerHTML = '';
+                        break;
+                    case 'pwd':
+                        print(cwd);
+                        break;
+                    case 'whoami':
+                        print('operator');
+                        break;
+                    case 'ls':
+                        const targetPath = args[1] ? window.NexusVFS.resolvePath(cwd, args[1]) : cwd;
+                        const node = window.NexusVFS.getNode(targetPath);
+                        if (!node) print(`ls: cannot access '${targetPath}': No such file or directory`);
+                        else if (node.type !== 'dir') print(args[1]);
+                        else {
+                            const files = Object.keys(node.children).map(k => {
+                                return node.children[k].type === 'dir' ? `<span class="text-[#00f0ff] font-bold">${k}/</span>` : `<span class="text-white">${k}</span>`;
+                            });
+                            print(`<div class="grid grid-cols-4 gap-2 mt-1">${files.join('')}</div>`);
+                        }
+                        break;
+                    case 'cd':
+                        const newPath = args[1] ? window.NexusVFS.resolvePath(cwd, args[1]) : '/home/operator';
+                        const nNode = window.NexusVFS.getNode(newPath);
+                        if (!nNode) print(`cd: ${args[1]}: No such file or directory`);
+                        else if (nNode.type !== 'dir') print(`cd: ${args[1]}: Not a directory`);
+                        else {
+                            cwd = newPath;
+                            const displayPath = cwd.startsWith('/home/operator') ? cwd.replace('/home/operator', '~') : cwd;
+                            prompt.textContent = `operator@nexus:${displayPath}$`;
+                        }
+                        break;
+                    case 'mkdir':
+                        if (!args[1]) return print('mkdir: missing operand');
+                        const parentNode = window.NexusVFS.getNode(cwd);
+                        if (parentNode.children[args[1]]) print(`mkdir: cannot create directory '${args[1]}': File exists`);
+                        else parentNode.children[args[1]] = { type: 'dir', perms: 'rwxr-xr-x', children: {} };
+                        break;
+                    case 'echo':
+                        if (args.length >= 3 && args[args.length - 2] === '>') {
+                            const text = args.slice(1, -2).join(' ');
+                            const fileName = args[args.length - 1];
+                            window.NexusVFS.writeFile(window.NexusVFS.resolvePath(cwd, fileName), text);
+                        } else {
+                            print(args.slice(1).join(' '));
+                        }
+                        break;
+                    case 'cat':
+                        if (!args[1]) return print('cat: missing operand');
+                        const fNode = window.NexusVFS.getNode(window.NexusVFS.resolvePath(cwd, args[1]));
+                        if (!fNode) print(`cat: ${args[1]}: No such file or directory`);
+                        else if (fNode.type === 'dir') print(`cat: ${args[1]}: Is a directory`);
+                        else print(`<pre class="text-gray-300 font-mono mt-1">${escape(fNode.content)}</pre>`);
+                        break;
+                    case 'msg':
+                        const msgText = args.slice(1).join(' ');
+                        if (!msgText) return print(`<span class="text-[#ff003c]">ERR: Message payload empty. Usage: msg [text]</span>`);
+                        inp.disabled = true;
+                        try {
+                            await window.NexusCloud.addDoc(chatRef, {
+                                name: 'operator',
+                                text: msgText,
+                                createdAt: window.NexusCloud.serverTimestamp()
+                            });
+                        } catch (e) {
+                            print(`<span class="text-[#ff003c]">TX_FAILED: ${e.message}</span>`);
+                        } finally {
+                            inp.disabled = false;
+                            inp.focus();
+                        }
+                        break;
+                    default:
+                        print(`nx-bash: ${escape(cmd)}: command not found`);
+                }
+            } catch (err) {
+                print(`<span class="text-[#ff003c]">CRITICAL_ERR: ${err.message}</span>`);
+            }
+        };
+
+        inp.onkeydown = (e) => {
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (hIdx > 0) inp.value = history[--hIdx];
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (hIdx < history.length - 1) inp.value = history[++hIdx];
+                else { hIdx = history.length; inp.value = ''; }
+            }
+        };
+        
+        setTimeout(() => inp.focus(), 100);
+    },
+    onClose: (winId) => {
+        // Καθαρισμός του Firebase Listener όταν κλείνει το παράθυρο
+        if(window.NexusWM.windows[winId]?.unsubscribeChat) {
+            window.NexusWM.windows[winId].unsubscribeChat();
+        }
+    }
+});
+
+// --- 2. TELEMETRY MONITOR APP (Canvas Graph Rendering) ---
+window.NexusWM.registerApp('monitor', {
+    title: 'HW_TELEMETRY',
+    width: 550,
+    height: 380,
+    render: (winId, container) => {
+        container.innerHTML = `
+            <div class="p-4 h-full bg-[#05050a] flex flex-col gap-4 overflow-hidden">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded">
+                        <div class="text-xs text-[#00f0ff] mb-2 font-mono flex justify-between">
+                            <span>CPU MATRIX</span>
+                            <span id="cpu-val-${winId}" class="font-bold">0%</span>
+                        </div>
+                        <canvas id="cpu-canv-${winId}" width="220" height="60" class="w-full"></canvas>
+                    </div>
+                    <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded">
+                        <div class="text-xs text-[#b000ff] mb-2 font-mono flex justify-between">
+                            <span>MEM ALLOC</span>
+                            <span id="ram-val-${winId}" class="font-bold">0GB</span>
+                        </div>
+                        <canvas id="ram-canv-${winId}" width="220" height="60" class="w-full"></canvas>
+                    </div>
+                </div>
+                <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded flex-1 flex flex-col">
+                    <div class="text-xs text-[#00ff41] mb-2 font-mono">NETWORK I/O (Gbps)</div>
+                    <div id="net-bars-${winId}" class="flex-1 flex items-end gap-1"></div>
+                </div>
+            </div>
+        `;
+
+        const drawGraph = (ctx, data, color) => {
+            ctx.clearRect(0, 0, 220, 60);
+            ctx.beginPath(); 
+            ctx.moveTo(0, 60);
+            data.forEach((val, i) => ctx.lineTo(i * (220 / 19), 60 - (val / 100) * 60));
+            ctx.lineTo(220, 60); 
+            ctx.fillStyle = color; 
+            ctx.fill();
+            ctx.strokeStyle = color.replace('0.3', '1'); 
+            ctx.lineWidth = 1.5; 
+            ctx.stroke();
+        };
+
+        const cpuCtx = document.getElementById(`cpu-canv-${winId}`).getContext('2d');
+        const ramCtx = document.getElementById(`ram-canv-${winId}`).getContext('2d');
+        const netBox = document.getElementById(`net-bars-${winId}`);
+        
+        let cpuData = Array(20).fill(0);
+        let ramData = Array(20).fill(0);
+
+        // Interval Loop για την ανανέωση των γραφημάτων
+        const interval = setInterval(() => {
+            const cpu = Math.floor(Math.random() * 80) + 15;
+            const ram = Math.floor(Math.random() * 30) + 20;
+            
+            cpuData.shift(); cpuData.push(cpu);
+            ramData.shift(); ramData.push(ram);
+            
+            document.getElementById(`cpu-val-${winId}`).innerText = `${cpu}%`;
+            document.getElementById(`ram-val-${winId}`).innerText = `${(ram * 0.64).toFixed(1)} GB`;
+            
+            drawGraph(cpuCtx, cpuData, 'rgba(0, 240, 255, 0.3)');
+            drawGraph(ramCtx, ramData, 'rgba(176, 0, 255, 0.3)');
+
+            // Μπάρες Δικτύου
+            netBox.innerHTML = Array(35).fill(0).map(() => {
+                const height = Math.random() * 90 + 10;
+                const color = height > 80 ? '#ff003c' : '#00ff41';
+                return `<div class="w-full opacity-80 transition-all duration-300" style="height: ${height}%; background-color: ${color}"></div>`;
+            }).join('');
+        }, 1200);
+
+        window.NexusWM.windows[winId].monitorInterval = interval;
+    },
+    onClose: (winId) => {
+        clearInterval(window.NexusWM.windows[winId].monitorInterval);
+    }
+});
