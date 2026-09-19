@@ -1,18 +1,19 @@
 {
-  "name": "nexuscode-site",
-  "version": "1.0.0",
-  "description": "Professional company website for NexusCode with blog and public chat",
+  "name": "nexusos-enterprise",
+  "version": "4.0.0",
+  "description": "NexusOS Global Command and Telemetry Relay",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test": "node --test"
+    "dev": "nodemon server.js"
   },
   "dependencies": {
-    "express": "^4.22.2",
-    "socket.io": "^4.8.3"
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
   },
   "engines": {
-    "node": ">=20"
-  }
+    "node": ">=18.0.0"
+  },
+  "author": "NexusCodex Engineering",
+  "license": "MIT"
 }
