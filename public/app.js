@@ -539,3 +539,157 @@ window.NexusWM.registerApp('monitor', {
         clearInterval(window.NexusWM.windows[winId].monitorInterval);
     }
 });
+// ==============================================================================
+// NEXUS_OS KERNEL - PART 3: DESKTOP, START MENU & BOOT SEQUENCE
+// ==============================================================================
+
+// --- 1. DESKTOP & UI INITIALIZATION ---
+const initDesktop = () => {
+    const desktop = document.getElementById('desktop');
+    const taskbar = document.getElementById('task-list');
+    
+    // Δημιουργία Εικονιδίων Επιφάνειας Εργασίας
+    const apps = [
+        { id: 'terminal', icon: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', name: 'Terminal' },
+        { id: 'monitor', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', name: 'Telemetry' }
+    ];
+
+    const iconGrid = document.createElement('div');
+    iconGrid.className = 'p-5 grid grid-cols-1 gap-6 w-24 relative z-10';
+    
+    apps.forEach(app => {
+        const btn = document.createElement('div');
+        btn.className = 'flex flex-col items-center justify-center cursor-pointer group';
+        btn.onclick = () => window.NexusWM.spawnWindow(app.id);
+        btn.innerHTML = `
+            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
+                <svg class="w-6 h-6 text-[#00f0ff] drop-shadow-[0_0_5px_rgba(0,240,255,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${app.icon}"></path></svg>
+            </div>
+            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">${app.name}</span>
+        `;
+        iconGrid.appendChild(btn);
+    });
+
+    desktop.appendChild(iconGrid);
+
+    // Μενού Έναρξης (SYS.START)
+    const startMenu = document.createElement('div');
+    startMenu.id = 'start-menu';
+    startMenu.className = 'absolute bottom-[40px] left-0 w-64 bg-[rgba(10,12,20,0.95)] border border-[rgba(0,240,255,0.4)] border-b-0 rounded-tr-lg hidden flex-col overflow-hidden z-[9500] backdrop-blur-md transition-all duration-200 opacity-0 transform translate-y-2';
+    startMenu.innerHTML = `
+        <div class="p-4 border-b border-[rgba(0,240,255,0.2)] flex items-center gap-3">
+            <div class="w-10 h-10 rounded bg-[#00f0ff] flex items-center justify-center text-black font-bold text-xl shadow-[0_0_10px_#00f0ff]">N</div>
+            <div>
+                <div class="font-bold text-white text-sm">OPERATOR</div>
+                <div class="text-[10px] text-[#00ff41] font-mono">SYS.ADMIN_LEVEL_9</div>
+            </div>
+        </div>
+        <div class="p-2 space-y-1">
+            <button class="w-full text-left px-4 py-2 hover:bg-[#00f0ff] hover:text-black transition-colors rounded text-sm text-gray-200" onclick="window.NexusWM.spawnWindow('terminal'); document.getElementById('start-btn').click();">Command Terminal</button>
+            <button class="w-full text-left px-4 py-2 hover:bg-[#00f0ff] hover:text-black transition-colors rounded text-sm text-gray-200" onclick="window.NexusWM.spawnWindow('monitor'); document.getElementById('start-btn').click();">Hardware Telemetry</button>
+            <button class="w-full text-left px-4 py-2 mt-2 text-[#ff003c] hover:bg-[#ff003c] hover:text-white transition-colors rounded text-sm border border-[#ff003c]/30" onclick="location.reload()">Reboot System</button>
+        </div>
+    `;
+    document.body.appendChild(startMenu);
+
+    const startBtn = document.getElementById('start-btn');
+    startBtn.onclick = () => {
+        const isHidden = startMenu.classList.contains('hidden');
+        if (isHidden) {
+            startMenu.classList.remove('hidden');
+            setTimeout(() => {
+                startMenu.classList.remove('opacity-0', 'translate-y-2');
+                startMenu.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+            startBtn.classList.add('bg-[#00f0ff]', 'text-black');
+        } else {
+            startMenu.classList.remove('opacity-100', 'translate-y-0');
+            startMenu.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => startMenu.classList.add('hidden'), 200);
+            startBtn.classList.remove('bg-[#00f0ff]', 'text-black');
+        }
+    };
+
+    // Ρολόι
+    setInterval(() => {
+        document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString('en-US', {hour12: false}) + ' UTC';
+    }, 1000);
+};
+
+// --- 2. BOOT SEQUENCE & AUTHENTICATION ---
+const initBootSequence = () => {
+    const authScreen = document.getElementById('auth-screen');
+    const authForm = document.getElementById('auth-form');
+    const authPwd = document.getElementById('auth-pwd');
+    const bootLog = document.getElementById('boot-log');
+
+    // Matrix Background Animation
+    const c = document.getElementById('matrix-bg');
+    const ctx = c.getContext('2d');
+    c.width = window.innerWidth; 
+    c.height = window.innerHeight;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%\"'#&_(),.;:?!\\|{}<>[]^~".split('');
+    const drops = Array(Math.floor(c.width / 14)).fill(1);
+    
+    setInterval(() => {
+        ctx.fillStyle = "rgba(5, 5, 10, 0.05)";
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.fillStyle = "#00ff41"; 
+        ctx.font = "14px monospace";
+        for(let i = 0; i < drops.length; i++) {
+            const text = chars[Math.floor(Math.random() * chars.length)];
+            ctx.fillText(text, i * 14, drops[i] * 14);
+            if(drops[i] * 14 > c.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }, 33);
+
+    // Boot Text Animation
+    const lines = [
+        'BIOS Date 09/19/2026 13:08:11 Ver 4.00',
+        'CPU: Quantum Core x128 @ 4.2THz',
+        'Memory Testing: 65536 OK',
+        'Loading Kernel Modules............ OK',
+        'Mounting VFS (Virtual File System) OK',
+        'Initializing Cloud Connectors..... OK',
+        'Awaiting Operator Input...'
+    ];
+    
+    let i = 0;
+    const bootInterval = setInterval(() => {
+        if (i < lines.length) {
+            bootLog.innerHTML += `<div>[${(i * 0.14).toFixed(3)}] ${lines[i]}</div>`;
+            bootLog.scrollTop = bootLog.scrollHeight;
+            i++;
+        } else {
+            clearInterval(bootInterval);
+        }
+    }, 300);
+
+    // Έλεγχος Κωδικού Πρόσβασης
+    authForm.onsubmit = (e) => {
+        e.preventDefault();
+        // Κωδικός πρόσβασης: 2945
+        if (btoa(authPwd.value.trim()) === 'Mjk0NQ==') {
+            authScreen.style.opacity = '0';
+            document.getElementById('net-status').innerHTML = `<span class="w-2 h-2 rounded-full animate-pulse bg-[#00ff41]"></span> UPLINK ACTIVE`;
+            document.getElementById('net-status').classList.replace('text-yellow-400', 'text-[#00ff41]');
+            
+            setTimeout(() => {
+                authScreen.remove();
+                // Αυτόματο άνοιγμα του τερματικού μετά το boot
+                window.NexusWM.spawnWindow('terminal');
+            }, 1000);
+        } else {
+            authPwd.value = '';
+            authScreen.classList.add('bg-red-900/40');
+            setTimeout(() => authScreen.classList.remove('bg-red-900/40'), 200);
+        }
+    };
+};
+
+// Εκτέλεση μόλις φορτώσει το DOM
+document.addEventListener('DOMContentLoaded', () => {
+    initDesktop();
+    initBootSequence();
+});
