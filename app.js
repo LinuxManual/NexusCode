@@ -1,1026 +1,281 @@
-// ==============================================================================
-// NEXUS_OS KERNEL - PART 1: FIREBASE, VFS, AND WINDOW MANAGER
-// ==============================================================================
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
-// --- 1. FIREBASE SYSTEM CLOUD CONFIGURATION ---
 const FIREBASE_CONFIG = {
-    apiKey: 'AIzaSyBm5k1wF7-RaC8hEtTy2Phznxey0FnAcsU',
-    authDomain: 'basket-clash-7901c.firebaseapp.com',
-    projectId: 'basket-clash-7901c',
-    storageBucket: 'basket-clash-7901c.firebasestorage.app',
-    messagingSenderId: '307971899685',
-    appId: '1:307971899685:web:8143142e3fbe3526ef5acc'
+  apiKey: "AIzaSyBm5k1wF7-RaC8hEtTy2Phznxey0FnAcsU",
+  authDomain: "basket-clash-7901c.firebaseapp.com",
+  projectId: "basket-clash-7901c",
+  storageBucket: "basket-clash-7901c.firebasestorage.app",
+  messagingSenderId: "307971899685",
+  appId: "1:307971899685:web:8143142e3fbe3526ef5acc"
 };
 
-const app = initializeApp(FIREBASE_CONFIG);
-const db = getFirestore(app);
-window.NexusCloud = { db, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp };
+const APPS = {
+  terminal:{title:"Nexus Terminal",icon:"⌁"},files:{title:"File Manager",icon:"▣"},browser:{title:"Nexus Browser",icon:"◉"},
+  monitor:{title:"System Monitor",icon:"⌁"},security:{title:"Security Center",icon:"◇"},chat:{title:"Nexus Comms",icon:"◌"},
+  ai:{title:"Nexus AI",icon:"✦"},runner:{title:"Nexus Runner",icon:"▶"},settings:{title:"Settings",icon:"⚙"},company:{title:"NexusCode",icon:"⌂"}
+};
 
-// --- 2. VIRTUAL FILE SYSTEM (VFS) ENGINE ---
-// Προσομοιώνει έναν πλήρη σκληρό δίσκο UNIX στη μνήμη του browser
-class VirtualFileSystem {
-    constructor() {
-        this.tree = {
-            '': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                'home': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                    'operator': { type: 'dir', perms: 'rwx------', children: {
-                        'documents': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                            'welcome.txt': { type: 'file', content: 'Welcome to NexusOS Global Command.', perms: 'rw-r--r--' },
-                            'mission.md': { type: 'file', content: '# DIRECTIVE\nEstablish global relay node.', perms: 'rw-r--r--' }
-                        }},
-                        'scripts': { type: 'dir', perms: 'rwxr-xr-x', children: {
-                            'hack.sh': { type: 'file', content: 'echo "Bypassing mainframe..."\nsleep 1\necho "Access Granted."', perms: 'rwxr-xr-x' }
-                        }}
-                    }}
-                }},
-                'sys': { type: 'dir', perms: 'r-xr-xr-x', children: {
-                    'kernel': { type: 'dir', perms: 'r-xr-xr-x', children: {
-                        'config.json': { type: 'file', content: '{"os": "Nexus", "version": 4.0, "firebase_sync": true}', perms: 'r--r--r--' }
-                    }},
-                    'logs': { type: 'dir', perms: 'rwxrwxrwx', children: {} }
-                }},
-                'bin': { type: 'dir', perms: 'r-xr-xr-x', children: {
-                    'sysmon': { type: 'exe' },
-                    'comms': { type: 'exe' }
-                }}
-            }}
-        };
-    }
+const state = {
+  user: localStorage.getItem("nexus_user") || "",
+  windows:new Map(), z:10, active:null, cwd:"/home/operator",
+  fs:{
+    "/home/operator/documents/welcome.txt":"Welcome to NexusOS 5.0.\nThis virtual workspace is yours.",
+    "/home/operator/documents/mission.md":"# NexusCode Mission\nBuild useful software, AI and secure digital experiences.",
+    "/home/operator/scripts/hack.sh":"#!/bin/nexus\\necho \"Simulation only — no real system access.\"",
+    "/sys/kernel/config.json":JSON.stringify({version:"5.0",mode:"simulation",security:"enabled"},null,2),
+    "/sys/logs/system.log":"[BOOT] NexusOS online\\n[SEC] Security center initialized\\n"
+  },
+  folderOpen:{"/home/operator":true},
+  chatUnsub:null,chatReady:false,onlineUsers:new Map(),history:[],
+  settings:{accent:"#38bdf8",animations:true,wallpaper:"grid"}
+};
 
-    // Επιστρέφει τον κόμβο (φάκελο/αρχείο) σε μια συγκεκριμένη διαδρομή
-    getNode(path) {
-        if (path === '/') return this.tree[''];
-        const parts = path.split('/').filter(Boolean);
-        let current = this.tree[''];
-        for (let part of parts) {
-            if (!current || current.type !== 'dir' || !current.children[part]) return null;
-            current = current.children[part];
-        }
-        return current;
-    }
+let db=null, auth=null, localChatTimer=null;
 
-    // Μετατρέπει σχετικές διαδρομές (π.χ. ../docs) σε απόλυτες (/home/operator/docs)
-    resolvePath(cwd, target) {
-        if (!target) return cwd;
-        if (target.startsWith('/')) return target;
-        if (target === '~') return '/home/operator';
-        
-        const parts = cwd.split('/').filter(Boolean);
-        const targetParts = target.split('/').filter(Boolean);
-        
-        for (let p of targetParts) {
-            if (p === '..') { parts.pop(); }
-            else if (p !== '.') { parts.push(p); }
-        }
-        return '/' + parts.join('/');
-    }
+function $(id){return document.getElementById(id)}
+function esc(v){return String(v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]})}
+function now(){return new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}
+function toast(title,msg,type="info"){
+  const el=document.createElement("div");el.className="toast";
+  el.innerHTML="<b>"+esc(title)+"</b><small>"+esc(msg)+"</small>";
+  $("toast-stack").appendChild(el);setTimeout(()=>el.remove(),3600);
+}
+function logBoot(msg,i){$("boot-log").innerHTML+="<div>"+esc(msg)+"</div>";$("boot-progress-bar").style.width=Math.min(100,i*12.5)+"%"}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 
-    // Δημιουργία αρχείου
-    writeFile(path, content, overwrite = true) {
-        const parts = path.split('/').filter(Boolean);
-        const fileName = parts.pop();
-        const dirPath = '/' + parts.join('/');
-        const dirNode = this.getNode(dirPath);
-
-        if (!dirNode || dirNode.type !== 'dir') throw new Error('Directory not found');
-        if (!overwrite && dirNode.children[fileName]) throw new Error('File already exists');
-        
-        dirNode.children[fileName] = { type: 'file', content: content, perms: 'rw-r--r--' };
-        return true;
-    }
+async function boot(){
+  const lines=["NEXUS BIOS 5.0","Checking virtual hardware... OK","Loading secure desktop... OK","Initializing filesystem... OK","Starting communications layer... OK","Starting system monitor... OK","Loading Nexus AI interface... OK","Starting graphical shell..."];
+  for(let i=0;i<lines.length;i++){logBoot(lines[i],i+1);await sleep(90)}
+  await sleep(250);$("boot").classList.add("hidden");$("auth").classList.remove("hidden");
+}
+function login(e){
+  e.preventDefault();
+  const u=$("auth-user").value.trim().replace(/[^a-zA-Z0-9_.-]/g,"").slice(0,24);
+  const p=$("auth-pwd").value;
+  if(u.length<2){$("auth-error").textContent="Username must contain at least 2 characters.";return}
+  if(p!=="nexus"){$("auth-error").textContent="Access denied. Use the demo code shown below.";return}
+  state.user=u;localStorage.setItem("nexus_user",u);
+  $("auth").classList.add("hidden");$("desktop").classList.remove("hidden");$("start-user").textContent=u;
+  buildStart();updateClock();setInterval(updateClock,1000);initFirebase();toast("Welcome to NexusOS",u+" is now online.");
+}
+function logout(){
+  state.windows.forEach(w=>w.el.remove());state.windows.clear();
+  if(state.chatUnsub)state.chatUnsub();state.chatUnsub=null;
+  localStorage.removeItem("nexus_user");location.reload();
+}
+function updateClock(){const d=new Date();$("sys-clock").textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+"  "+d.toLocaleDateString([], {day:"2-digit",month:"short"})}
+function buildStart(filter=""){
+  const list=$("app-list");list.innerHTML="";
+  Object.entries(APPS).filter(([k,v])=>(k+" "+v.title).toLowerCase().includes(filter.toLowerCase())).forEach(([k,v])=>{
+    const b=document.createElement("button");b.className="app-item";b.innerHTML="<span>"+v.icon+"</span><b>"+v.title+"</b>";
+    b.onclick=()=>{openApp(k);$("start-menu").classList.add("hidden")};list.appendChild(b);
+  });
+}
+function bring(w){state.z++;w.el.style.zIndex=state.z;state.active=w.id;document.querySelectorAll(".task").forEach(x=>x.classList.remove("active"));const t=document.querySelector('[data-task="'+w.id+'"]');if(t)t.classList.add("active")}
+function makeWindow(app){
+  const id="w"+Date.now()+Math.random().toString(16).slice(2);const meta=APPS[app];
+  const el=document.createElement("section");el.className="window";el.dataset.id=id;
+  const left=150+(state.windows.size%4)*32,top=70+(state.windows.size%4)*28;
+  el.style.left=left+"px";el.style.top=top+"px";el.style.zIndex=++state.z;
+  el.innerHTML='<div class="titlebar"><div class="title-text"><i class="window-dot"></i>'+esc(meta.title)+'</div><div class="win-actions"><button data-act="min">—</button><button data-act="max">□</button><button data-act="close">×</button></div></div><div class="window-body"></div>';
+  $("windows").appendChild(el);
+  const w={id,app,el,body:el.querySelector(".window-body"),title:meta.title};
+  state.windows.set(id,w);bring(w);
+  el.addEventListener("mousedown",()=>bring(w));
+  el.querySelector('[data-act="close"]').onclick=()=>{el.remove();state.windows.delete(id);document.querySelector('[data-task="'+id+'"]')?.remove()};
+  el.querySelector('[data-act="min"]').onclick=()=>{el.classList.toggle("minimized")};
+  el.querySelector('[data-act="max"]').onclick=()=>{el.classList.toggle("maximized");bring(w)};
+  dragWindow(el,el.querySelector(".titlebar"));
+  return w;
+}
+function dragWindow(el,bar){
+  let sx=0,sy=0,sl=0,st=0,moving=false;
+  bar.addEventListener("mousedown",e=>{if(e.target.closest("button")||el.classList.contains("maximized"))return;moving=true;sx=e.clientX;sy=e.clientY;sl=el.offsetLeft;st=el.offsetTop;document.body.style.userSelect="none"});
+  window.addEventListener("mousemove",e=>{if(!moving)return;el.style.left=Math.max(0,sl+e.clientX-sx)+"px";el.style.top=Math.max(0,st+e.clientY-sy)+"px"});
+  window.addEventListener("mouseup",()=>{moving=false;document.body.style.userSelect=""});
+}
+function addTask(w){
+  const b=document.createElement("button");b.className="task active";b.dataset.task=w.id;b.textContent=w.title;
+  b.onclick=()=>{if(w.el.classList.contains("minimized"))w.el.classList.remove("minimized");bring(w)};$("task-list").appendChild(b);
+}
+function openApp(app){
+  const existing=[...state.windows.values()].find(w=>w.app===app);
+  if(existing){existing.el.classList.remove("minimized");bring(existing);return}
+  const w=makeWindow(app);addTask(w);renderApp(w);
+}
+function renderApp(w){
+  const fn={terminal:renderTerminal,files:renderFiles,browser:renderBrowser,monitor:renderMonitor,security:renderSecurity,chat:renderChat,ai:renderAI,runner:renderRunner,settings:renderSettings,company:renderCompany}[w.app];
+  if(fn)fn(w);
 }
 
-// --- 3. WINDOW MANAGER (COMPOSITOR) ---
-// Διαχειρίζεται τα γραφικά παράθυρα, το Drag & Drop, και το Taskbar
-class WindowManager {
-    constructor() {
-        this.desktop = document.getElementById('desktop');
-        this.tasklist = document.getElementById('task-list');
-        this.windows = {};
-        this.zIndexCounter = 1000;
-        this.dragState = { active: false, id: null, offX: 0, offY: 0 };
-        this.apps = {}; // Θα φορτωθούν στο Μέρος 2
-
-        this.bindGlobalEvents();
-    }
-
-    bindGlobalEvents() {
-        document.addEventListener('mousemove', (e) => {
-            if (!this.dragState.active) return;
-            const win = this.windows[this.dragState.id].dom;
-            // Αποτροπή εξόδου του παραθύρου εκτός οθόνης
-            let newX = Math.max(0, e.clientX - this.dragState.offX);
-            let newY = Math.max(0, e.clientY - this.dragState.offY);
-            win.style.left = `${newX}px`;
-            win.style.top = `${newY}px`;
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (this.dragState.active) {
-                this.windows[this.dragState.id].dom.style.opacity = '1';
-                this.dragState.active = false;
-            }
-        });
-    }
-
-    registerApp(appId, config) {
-        this.apps[appId] = config;
-    }
-
-    spawnWindow(appId, args = null) {
-        const app = this.apps[appId];
-        if (!app) {
-            console.error(`App [${appId}] not registered in WindowManager.`);
-            return;
-        }
-
-        const winId = `win_${appId}_${Date.now()}`;
-        const offset = (Object.keys(this.windows).length % 10) * 30;
-        
-        // Κατασκευή DOM Παραθύρου
-        const win = document.createElement('div');
-        win.className = 'absolute bg-[rgba(10,12,20,0.9)] border border-[rgba(0,240,255,0.4)] shadow-2xl flex flex-col backdrop-blur-md overflow-hidden transition-transform duration-100';
-        win.style.width = `${app.width || 600}px`;
-        win.style.height = `${app.height || 400}px`;
-        win.style.left = `${100 + offset}px`;
-        win.style.top = `${50 + offset}px`;
-        win.style.zIndex = ++this.zIndexCounter;
-        win.style.borderRadius = '8px 8px 0 0';
-
-        win.innerHTML = `
-            <div class="bg-[rgba(0,240,255,0.1)] border-b border-[rgba(0,240,255,0.3)] px-3 py-2 flex justify-between items-center cursor-grab select-none win-header">
-                <div class="text-white font-mono text-xs font-bold tracking-wider flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-[#00ff41] animate-pulse"></span>
-                    ${app.title}
-                </div>
-                <div class="flex gap-2">
-                    <button class="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors win-min"></button>
-                    <button class="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors win-max"></button>
-                    <button class="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors win-close"></button>
-                </div>
-            </div>
-            <div class="flex-1 relative overflow-hidden flex flex-col" id="content_${winId}"></div>
-        `;
-
-        this.desktop.appendChild(win);
-
-        // Κατασκευή Taskbar Item
-        const task = document.createElement('button');
-        task.className = 'px-3 py-1 bg-[rgba(0,240,255,0.1)] border-b-2 border-[#00f0ff] text-white font-mono text-xs flex items-center gap-2 hover:bg-[rgba(0,240,255,0.2)] transition-colors';
-        task.innerHTML = `<span class="w-2 h-2 bg-[#00f0ff]"></span> ${app.title.split(' ')[0]}`;
-        
-        if(this.tasklist) this.tasklist.appendChild(task);
-
-        // Αποθήκευση στο State
-        this.windows[winId] = { dom: win, taskDom: task, minimized: false, maximized: false, oldRect: null };
-
-        // Bind Window Controls
-        this.bindWindowControls(winId, win, task);
-
-        // Render App Content
-        const contentArea = document.getElementById(`content_${winId}`);
-        app.render(winId, contentArea, args);
-        
-        this.focus(winId);
-        return winId;
-    }
-
-    bindWindowControls(id, win, task) {
-        const header = win.querySelector('.win-header');
-        
-        // Dragging
-        header.addEventListener('mousedown', (e) => {
-            if (this.windows[id].maximized || e.target.tagName === 'BUTTON') return;
-            this.focus(id);
-            const rect = win.getBoundingClientRect();
-            this.dragState = { active: true, id: id, offX: e.clientX - rect.left, offY: e.clientY - rect.top };
-            win.style.opacity = '0.8';
-        });
-
-        // Focus on click anywhere in window
-        win.addEventListener('mousedown', () => this.focus(id));
-        
-        // Buttons
-        win.querySelector('.win-close').onclick = () => this.destroy(id);
-        win.querySelector('.win-max').onclick = () => this.maximize(id);
-        win.querySelector('.win-min').onclick = () => this.toggleMinimize(id);
-        task.onclick = () => this.toggleMinimize(id);
-    }
-
-    focus(id) {
-        if (!this.windows[id]) return;
-        this.windows[id].dom.style.zIndex = ++this.zIndexCounter;
-        
-        // Update taskbar visual state
-        Object.values(this.windows).forEach(w => {
-            if(w.taskDom) {
-                w.taskDom.classList.remove('border-[#00f0ff]', 'bg-[rgba(0,240,255,0.2)]');
-                w.taskDom.classList.add('border-transparent', 'bg-[rgba(255,255,255,0.05)]');
-            }
-        });
-        const activeTask = this.windows[id].taskDom;
-        if(activeTask) {
-            activeTask.classList.remove('border-transparent', 'bg-[rgba(255,255,255,0.05)]');
-            activeTask.classList.add('border-[#00f0ff]', 'bg-[rgba(0,240,255,0.2)]');
-        }
-    }
-
-    toggleMinimize(id) {
-        const win = this.windows[id];
-        if (win.minimized) {
-            win.dom.style.display = 'flex';
-            win.minimized = false;
-            this.focus(id);
-        } else {
-            // Αν είναι ήδη μπροστά, ελαχιστοποίησέ το. Αλλιώς, φέρτο μπροστά.
-            if (win.dom.style.zIndex == this.zIndexCounter) {
-                win.dom.style.display = 'none';
-                win.minimized = true;
-                win.taskDom.classList.remove('border-[#00f0ff]');
-            } else {
-                this.focus(id);
-            }
-        }
-    }
-
-    maximize(id) {
-        const win = this.windows[id];
-        if (win.maximized) {
-            win.dom.style.width = win.oldRect.width;
-            win.dom.style.height = win.oldRect.height;
-            win.dom.style.left = win.oldRect.left;
-            win.dom.style.top = win.oldRect.top;
-            win.dom.style.borderRadius = '8px 8px 0 0';
-            win.maximized = false;
-        } else {
-            win.oldRect = {
-                width: win.dom.style.width, height: win.dom.style.height,
-                left: win.dom.style.left, top: win.dom.style.top
-            };
-            win.dom.style.width = '100%';
-            win.dom.style.height = '100%';
-            win.dom.style.left = '0';
-            win.dom.style.top = '0';
-            win.dom.style.borderRadius = '0';
-            win.maximized = true;
-        }
-    }
-
-    destroy(id) {
-        this.windows[id].dom.remove();
-        if(this.windows[id].taskDom) this.windows[id].taskDom.remove();
-        
-        // Trigger on_close event if app defined it
-        const appId = id.split('_')[1];
-        if (this.apps[appId] && this.apps[appId].onClose) {
-            this.apps[appId].onClose(id);
-        }
-        delete this.windows[id];
-    }
+function renderTerminal(w){
+  w.body.innerHTML='<div class="terminal"><div id="term-out-'+w.id+'" class="terminal-output"></div><div class="terminal-line"><span class="prompt">'+esc(state.user)+"@nexus:"+esc(state.cwd)+'$</span><input class="terminal-input" autocomplete="off" spellcheck="false" autofocus></div></div>';
+  const out=w.body.querySelector(".terminal-output"),input=w.body.querySelector(".terminal-input");
+  const print=(s,cls="")=>{const d=document.createElement("div");d.className=cls;d.textContent=s;out.appendChild(d);out.scrollTop=out.scrollHeight};
+  print("Nexus Terminal 5.0 — type 'help' for commands.","cmd-info");
+  print("Users can talk to each other here with: msg <user> <message> or broadcast <message>.","cmd-info");
+  input.addEventListener("keydown",async e=>{
+    if(e.key!=="Enter")return;const cmd=input.value.trim();if(!cmd)return;
+    print(state.user+"@nexus:"+state.cwd+"$ "+cmd);input.value="";
+    const result=await terminalCommand(cmd,print);if(result!==undefined)print(result, result.startsWith("Error")?"cmd-error":"cmd-ok");
+    w.body.querySelector(".prompt").textContent=state.user+"@nexus:"+state.cwd+"$";
+  });
+  setTimeout(()=>input.focus(),30);
 }
+async function terminalCommand(raw,print){
+  const parts=raw.match(/"[^"]*"|'[^']*'|\\S+/g)||[];const cmd=(parts.shift()||"").toLowerCase();const arg=parts.join(" ").replace(/^["']|["']$/g,"");
+  if(cmd==="help")return "help clear who users msg <user> <text> broadcast <text> chat ls cd cat touch mkdir rm open ps sysmon security ping date echo about neofetch";
+  if(cmd==="clear"){document.querySelectorAll(".terminal-output").forEach(x=>x.innerHTML="");return}
+  if(cmd==="date")return new Date().toString();
+  if(cmd==="echo")return arg;
+  if(cmd==="about")return "NexusCode / NexusOS 5.0 — interactive simulation.";
+  if(cmd==="neofetch")return "NEXUSOS 5.0\\nKernel: Nexus Virtual Kernel\\nShell: nxshell\\nNetwork: ONLINE\\nUser: "+state.user;
+  if(cmd==="who"||cmd==="users")return await listUsers();
+  if(cmd==="msg"||cmd==="tell"){
+    const m=raw.match(/^\\S+\\s+(\\S+)\\s+([\\s\\S]+)$/);if(!m)return "Error: msg <username> <message>";
+    return await sendDirect(m[1],m[2]);
+  }
+  if(cmd==="broadcast"||cmd==="say"){if(!arg)return "Error: broadcast <message>";return await sendChat(arg,"global")}
+  if(cmd==="chat")return "Open Comms for the full chat UI. Terminal chat commands: who, msg <user> <text>, broadcast <text>.";
+  if(cmd==="ls"){
+    const prefix=state.cwd.endsWith("/")?state.cwd:state.cwd+"/";const items=Object.keys(state.fs).filter(p=>p.startsWith(prefix)&&p!==prefix).map(p=>p.slice(prefix.length).split("/")[0]);
+    return [...new Set(items)].join("  ")||"(empty)";
+  }
+  if(cmd==="cd"){let p=arg||"/home/operator";if(!p.startsWith("/"))p=state.cwd+"/"+p;p=p.replace(/\\/+/g,"/");if(state.fs[p]===undefined&&!Object.keys(state.fs).some(x=>x.startsWith(p+"/")))return "Error: directory not found";state.cwd=p;return "cwd = "+p}
+  if(cmd==="cat"){let p=resolvePath(arg);return state.fs[p]===undefined?"Error: file not found":String(state.fs[p])}
+  if(cmd==="touch"){let p=resolvePath(arg);if(!arg)return "Error: filename required";state.fs[p]="";return "created "+p}
+  if(cmd==="mkdir"){let p=resolvePath(arg);if(!arg)return "Error: directory required";state.fs[p+"/.dir"]="";return "created "+p}
+  if(cmd==="rm"){let p=resolvePath(arg);if(!state.fs[p]&&!Object.keys(state.fs).some(x=>x.startsWith(p+"/")))return "Error: not found";Object.keys(state.fs).filter(x=>x===p||x.startsWith(p+"/")).forEach(x=>delete state.fs[x]);return "removed "+p}
+  if(cmd==="open"){openApp(arg&&APPS[arg]?arg:"files");return "opened "+(arg||"files")}
+  if(cmd==="ps"||cmd==="sysmon"){openApp("monitor");return "system monitor opened"}
+  if(cmd==="security"){openApp("security");return "security center opened"}
+  if(cmd==="ping")return "nexus-gateway: 18ms  •  firestore: "+(state.chatReady?"connected":"offline");
+  return "Error: command not found — "+cmd;
+}
+function resolvePath(p){if(!p)return state.cwd;if(p.startsWith("/"))return p;return (state.cwd+"/"+p).replace(/\\/+/g,"/")}
 
-// Αρχικοποίηση Πυρήνα
-window.NexusVFS = new VirtualFileSystem();
-window.NexusWM = new WindowManager();
-// ==============================================================================
-// NEXUS_OS KERNEL - PART 2: TERMINAL ENGINE & TELEMETRY MONITOR
-// ==============================================================================
-
-// --- 1. THE TERMINAL APP (Command Line Interface) ---
-window.NexusWM.registerApp('terminal', {
-    title: 'TTY1 - Global Terminal',
-    width: 650,
-    height: 450,
-    render: (winId, container) => {
-        container.innerHTML = `
-            <div id="term-out-${winId}" class="flex-1 bg-[rgba(2,2,5,0.95)] text-[#00f0ff] p-4 overflow-y-auto font-mono text-[13px] leading-relaxed select-text">
-                <div class="mb-4 text-[#00ff41]">
-                    NexusOS Core v4.0 - Global Access Terminal<br>
-                    Type <span class="text-white font-bold">'help'</span> for a list of executables.
-                </div>
-            </div>
-            <form id="term-form-${winId}" class="bg-black border-t border-[rgba(0,240,255,0.3)] p-3 flex font-mono text-[13px]">
-                <span id="prompt-${winId}" class="text-[#00ff41] font-bold mr-2 shadow-[#00ff41]">operator@nexus:~$</span>
-                <input type="text" id="term-inp-${winId}" class="flex-1 bg-transparent text-white outline-none" autocomplete="off" spellcheck="false">
-            </form>
-        `;
-
-        const out = document.getElementById(`term-out-${winId}`);
-        const inp = document.getElementById(`term-inp-${winId}`);
-        const form = document.getElementById(`term-form-${winId}`);
-        const prompt = document.getElementById(`prompt-${winId}`);
-
-        let cwd = '/home/operator';
-        let history = [];
-        let hIdx = -1;
-
-        const print = (html) => {
-            out.innerHTML += `<div class="mb-1">${html}</div>`;
-            out.scrollTop = out.scrollHeight;
-        };
-        const escape = (s) => s.replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-
-        // Firebase: Ακρόαση για νέα μηνύματα (Global Chat)
-        const chatRef = window.NexusCloud.collection(window.NexusCloud.db, 'messages');
-        const chatQuery = window.NexusCloud.query(chatRef, window.NexusCloud.orderBy('createdAt', 'desc'), window.NexusCloud.limit(1));
-        let isFirstLoad = true;
-
-        const unsubscribe = window.NexusCloud.onSnapshot(chatQuery, (snap) => {
-            if (isFirstLoad) { isFirstLoad = false; return; } // Αγνόηση του παλιού ιστορικού κατά το άνοιγμα
-            snap.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const d = change.doc.data();
-                    const time = d.createdAt?.toDate ? d.createdAt.toDate().toLocaleTimeString([], {hour12:false}) : 'NOW';
-                    print(`<span class="text-gray-500">[${time}]</span> <span class="text-[#00ff41]">NET_RCV</span> &lt;<span class="text-[#b000ff]">${escape(d.name)}</span>&gt; <span class="text-white">${escape(d.text)}</span>`);
-                }
-            });
-        });
-
-        // Αποθήκευση του listener για να κλείσει όταν κλείσει το παράθυρο
-        window.NexusWM.windows[winId].unsubscribeChat = unsubscribe;
-
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            const rawCmd = inp.value.trim();
-            if (!rawCmd) return;
-
-            print(`<span class="text-[#00ff41]">${prompt.textContent}</span> <span class="text-white">${escape(rawCmd)}</span>`);
-            history.push(rawCmd);
-            hIdx = history.length;
-            inp.value = '';
-
-            // Διαχωρισμός εντολής (κρατάει τα strings σε εισαγωγικά ενωμένα)
-            const args = rawCmd.match(/(?:[^\s"]+|"[^"]*")+/g).map(s => s.replace(/(^"|"$)/g, ''));
-            const cmd = args[0].toLowerCase();
-
-            try {
-                switch (cmd) {
-                    case 'help':
-                        print(`Available Modules: <span class="text-white">ls, cd, pwd, mkdir, cat, echo, clear, whoami, msg</span>`);
-                        break;
-                    case 'clear':
-                        out.innerHTML = '';
-                        break;
-                    case 'pwd':
-                        print(cwd);
-                        break;
-                    case 'whoami':
-                        print('operator');
-                        break;
-                    case 'ls':
-                        const targetPath = args[1] ? window.NexusVFS.resolvePath(cwd, args[1]) : cwd;
-                        const node = window.NexusVFS.getNode(targetPath);
-                        if (!node) print(`ls: cannot access '${targetPath}': No such file or directory`);
-                        else if (node.type !== 'dir') print(args[1]);
-                        else {
-                            const files = Object.keys(node.children).map(k => {
-                                return node.children[k].type === 'dir' ? `<span class="text-[#00f0ff] font-bold">${k}/</span>` : `<span class="text-white">${k}</span>`;
-                            });
-                            print(`<div class="grid grid-cols-4 gap-2 mt-1">${files.join('')}</div>`);
-                        }
-                        break;
-                    case 'cd':
-                        const newPath = args[1] ? window.NexusVFS.resolvePath(cwd, args[1]) : '/home/operator';
-                        const nNode = window.NexusVFS.getNode(newPath);
-                        if (!nNode) print(`cd: ${args[1]}: No such file or directory`);
-                        else if (nNode.type !== 'dir') print(`cd: ${args[1]}: Not a directory`);
-                        else {
-                            cwd = newPath;
-                            const displayPath = cwd.startsWith('/home/operator') ? cwd.replace('/home/operator', '~') : cwd;
-                            prompt.textContent = `operator@nexus:${displayPath}$`;
-                        }
-                        break;
-                    case 'mkdir':
-                        if (!args[1]) return print('mkdir: missing operand');
-                        const parentNode = window.NexusVFS.getNode(cwd);
-                        if (parentNode.children[args[1]]) print(`mkdir: cannot create directory '${args[1]}': File exists`);
-                        else parentNode.children[args[1]] = { type: 'dir', perms: 'rwxr-xr-x', children: {} };
-                        break;
-                    case 'echo':
-                        if (args.length >= 3 && args[args.length - 2] === '>') {
-                            const text = args.slice(1, -2).join(' ');
-                            const fileName = args[args.length - 1];
-                            window.NexusVFS.writeFile(window.NexusVFS.resolvePath(cwd, fileName), text);
-                        } else {
-                            print(args.slice(1).join(' '));
-                        }
-                        break;
-                    case 'cat':
-                        if (!args[1]) return print('cat: missing operand');
-                        const fNode = window.NexusVFS.getNode(window.NexusVFS.resolvePath(cwd, args[1]));
-                        if (!fNode) print(`cat: ${args[1]}: No such file or directory`);
-                        else if (fNode.type === 'dir') print(`cat: ${args[1]}: Is a directory`);
-                        else print(`<pre class="text-gray-300 font-mono mt-1">${escape(fNode.content)}</pre>`);
-                        break;
-                    case 'msg':
-                        const msgText = args.slice(1).join(' ');
-                        if (!msgText) return print(`<span class="text-[#ff003c]">ERR: Message payload empty. Usage: msg [text]</span>`);
-                        inp.disabled = true;
-                        try {
-                            await window.NexusCloud.addDoc(chatRef, {
-                                name: 'operator',
-                                text: msgText,
-                                createdAt: window.NexusCloud.serverTimestamp()
-                            });
-                        } catch (e) {
-                            print(`<span class="text-[#ff003c]">TX_FAILED: ${e.message}</span>`);
-                        } finally {
-                            inp.disabled = false;
-                            inp.focus();
-                        }
-                        break;
-                    default:
-                        print(`nx-bash: ${escape(cmd)}: command not found`);
-                }
-            } catch (err) {
-                print(`<span class="text-[#ff003c]">CRITICAL_ERR: ${err.message}</span>`);
-            }
-        };
-
-        inp.onkeydown = (e) => {
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (hIdx > 0) inp.value = history[--hIdx];
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (hIdx < history.length - 1) inp.value = history[++hIdx];
-                else { hIdx = history.length; inp.value = ''; }
-            }
-        };
-        
-        setTimeout(() => inp.focus(), 100);
-    },
-    onClose: (winId) => {
-        // Καθαρισμός του Firebase Listener όταν κλείνει το παράθυρο
-        if(window.NexusWM.windows[winId]?.unsubscribeChat) {
-            window.NexusWM.windows[winId].unsubscribeChat();
-        }
-    }
-});
-
-// --- 2. TELEMETRY MONITOR APP (Canvas Graph Rendering) ---
-window.NexusWM.registerApp('monitor', {
-    title: 'HW_TELEMETRY',
-    width: 550,
-    height: 380,
-    render: (winId, container) => {
-        container.innerHTML = `
-            <div class="p-4 h-full bg-[#05050a] flex flex-col gap-4 overflow-hidden">
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded">
-                        <div class="text-xs text-[#00f0ff] mb-2 font-mono flex justify-between">
-                            <span>CPU MATRIX</span>
-                            <span id="cpu-val-${winId}" class="font-bold">0%</span>
-                        </div>
-                        <canvas id="cpu-canv-${winId}" width="220" height="60" class="w-full"></canvas>
-                    </div>
-                    <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded">
-                        <div class="text-xs text-[#b000ff] mb-2 font-mono flex justify-between">
-                            <span>MEM ALLOC</span>
-                            <span id="ram-val-${winId}" class="font-bold">0GB</span>
-                        </div>
-                        <canvas id="ram-canv-${winId}" width="220" height="60" class="w-full"></canvas>
-                    </div>
-                </div>
-                <div class="border border-[rgba(0,240,255,0.3)] p-3 bg-black rounded flex-1 flex flex-col">
-                    <div class="text-xs text-[#00ff41] mb-2 font-mono">NETWORK I/O (Gbps)</div>
-                    <div id="net-bars-${winId}" class="flex-1 flex items-end gap-1"></div>
-                </div>
-            </div>
-        `;
-
-        const drawGraph = (ctx, data, color) => {
-            ctx.clearRect(0, 0, 220, 60);
-            ctx.beginPath(); 
-            ctx.moveTo(0, 60);
-            data.forEach((val, i) => ctx.lineTo(i * (220 / 19), 60 - (val / 100) * 60));
-            ctx.lineTo(220, 60); 
-            ctx.fillStyle = color; 
-            ctx.fill();
-            ctx.strokeStyle = color.replace('0.3', '1'); 
-            ctx.lineWidth = 1.5; 
-            ctx.stroke();
-        };
-
-        const cpuCtx = document.getElementById(`cpu-canv-${winId}`).getContext('2d');
-        const ramCtx = document.getElementById(`ram-canv-${winId}`).getContext('2d');
-        const netBox = document.getElementById(`net-bars-${winId}`);
-        
-        let cpuData = Array(20).fill(0);
-        let ramData = Array(20).fill(0);
-
-        // Interval Loop για την ανανέωση των γραφημάτων
-        const interval = setInterval(() => {
-            const cpu = Math.floor(Math.random() * 80) + 15;
-            const ram = Math.floor(Math.random() * 30) + 20;
-            
-            cpuData.shift(); cpuData.push(cpu);
-            ramData.shift(); ramData.push(ram);
-            
-            document.getElementById(`cpu-val-${winId}`).innerText = `${cpu}%`;
-            document.getElementById(`ram-val-${winId}`).innerText = `${(ram * 0.64).toFixed(1)} GB`;
-            
-            drawGraph(cpuCtx, cpuData, 'rgba(0, 240, 255, 0.3)');
-            drawGraph(ramCtx, ramData, 'rgba(176, 0, 255, 0.3)');
-
-            // Μπάρες Δικτύου
-            netBox.innerHTML = Array(35).fill(0).map(() => {
-                const height = Math.random() * 90 + 10;
-                const color = height > 80 ? '#ff003c' : '#00ff41';
-                return `<div class="w-full opacity-80 transition-all duration-300" style="height: ${height}%; background-color: ${color}"></div>`;
-            }).join('');
-        }, 1200);
-
-        window.NexusWM.windows[winId].monitorInterval = interval;
-    },
-    onClose: (winId) => {
-        clearInterval(window.NexusWM.windows[winId].monitorInterval);
-    }
-});
-// ==============================================================================
-// NEXUS_OS KERNEL - PART 3: DESKTOP, START MENU & BOOT SEQUENCE
-// ==============================================================================
-
-// --- 1. DESKTOP & UI INITIALIZATION ---
-const initDesktop = () => {
-    const desktop = document.getElementById('desktop');
-    const taskbar = document.getElementById('task-list');
-    
-    // Δημιουργία Εικονιδίων Επιφάνειας Εργασίας
-    const apps = [
-        { id: 'terminal', icon: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', name: 'Terminal' },
-        { id: 'monitor', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', name: 'Telemetry' }
-    ];
-
-    const iconGrid = document.createElement('div');
-    iconGrid.className = 'p-5 grid grid-cols-1 gap-6 w-24 relative z-10';
-    
-    apps.forEach(app => {
-        const btn = document.createElement('div');
-        btn.className = 'flex flex-col items-center justify-center cursor-pointer group';
-        btn.onclick = () => window.NexusWM.spawnWindow(app.id);
-        btn.innerHTML = `
-            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
-                <svg class="w-6 h-6 text-[#00f0ff] drop-shadow-[0_0_5px_rgba(0,240,255,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="${app.icon}"></path></svg>
-            </div>
-            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">${app.name}</span>
-        `;
-        iconGrid.appendChild(btn);
+function renderFiles(w){
+  w.body.innerHTML='<div class="file-layout"><aside class="file-sidebar"><button class="active" data-path="/home/operator">⌂ Home</button><button data-path="/home/operator/documents">▤ Documents</button><button data-path="/home/operator/scripts">⚙ Scripts</button><button data-path="/sys">◇ System</button></aside><div class="file-main"><div class="app-toolbar"><button class="tool-btn" id="new-file-'+w.id+'">+ File</button><button class="tool-btn" id="new-folder-'+w.id+'">+ Folder</button><button class="tool-btn" id="refresh-'+w.id+'">Refresh</button></div><div class="pathbar" id="path-'+w.id+'"></div><div class="file-grid" id="grid-'+w.id+'"></div></div></div>';
+  const render=(path)=>{
+    state.cwd=path;$("path-"+w.id).textContent=path;const grid=$("grid-"+w.id);grid.innerHTML="";
+    const prefix=path.endsWith("/")?path:path+"/";const names=new Set();
+    Object.keys(state.fs).forEach(p=>{if(!p.startsWith(prefix)||p===prefix)return;const rest=p.slice(prefix.length).split("/");if(rest.length)names.add(rest[0])});
+    [...names].sort().forEach(name=>{
+      const full=prefix+name,isDir=[...Object.keys(state.fs)].some(p=>p.startsWith(full+"/"));const b=document.createElement("button");b.className="file-card";
+      b.innerHTML='<div class="icon">'+(isDir?"▰":"▤")+'</div><b>'+esc(name)+'</b>';b.onclick=()=>isDir?render(full):editFile(full);
+      grid.appendChild(b);
     });
+  };
+  w.body.querySelectorAll(".file-sidebar button").forEach(b=>b.onclick=()=>render(b.dataset.path));
+  $("new-file-"+w.id).onclick=()=>{const n=prompt("Filename");if(n){state.fs[state.cwd+"/"+n]="";render(state.cwd)}};
+  $("new-folder-"+w.id).onclick=()=>{const n=prompt("Folder name");if(n){state.fs[state.cwd+"/"+n+"/.dir"]="";render(state.cwd)}};
+  $("refresh-"+w.id).onclick=()=>render(state.cwd);render("/home/operator");
+}
+function editFile(path){
+  const old=state.fs[path]||"";const w=makeWindow({title:"Editor: "+path.split("/").pop(),icon:"✎"});w.app="editor";addTask(w);
+  w.body.innerHTML='<div class="editor"><div class="app-toolbar"><button class="tool-btn" id="save-editor">Save</button><span class="pathbar">'+esc(path)+'</span></div><textarea>'+esc(old)+'</textarea></div>';
+  w.body.querySelector("#save-editor").onclick=()=>{state.fs[path]=w.body.querySelector("textarea").value;toast("File saved",path)};
+}
 
-    desktop.appendChild(iconGrid);
+function renderBrowser(w){
+  w.body.innerHTML='<div class="browser"><div class="browser-nav"><button class="tool-btn" id="back-'+w.id+'">←</button><button class="tool-btn" id="home-'+w.id+'">⌂</button><input id="url-'+w.id+'" value="nexus://home"><button class="tool-btn" id="go-'+w.id+'">GO</button></div><div class="browser-page" id="page-'+w.id+'"></div></div>';
+  const page=$("page-"+w.id),url=$("url-"+w.id);
+  const load=()=>{
+    const u=url.value.trim();page.innerHTML='<div class="hero"><h1>Nexus<span>Code</span></h1><p>Software engineering, artificial intelligence and cybersecurity — presented through the NexusOS experience.</p><button class="primary-btn" id="launch-services">Explore services</button></div><div class="cards"><div class="card"><h3>AI Engineering</h3><p>Local and cloud AI workflows, agents and automation.</p></div><div class="card"><h3>Cybersecurity</h3><p>Security tooling, monitoring and secure-by-design software.</p></div><div class="card"><h3>Cloud Systems</h3><p>Modern web platforms, realtime data and scalable infrastructure.</p></div></div>';
+    if(u!=="nexus://home"&&!u.startsWith("nexus://"))page.innerHTML='<div class="hero"><h1>Internal Browser</h1><p>This NexusOS demo intentionally stays inside the simulated environment. External browsing can be connected later to a trusted backend.</p><div class="card"><b>'+esc(u)+'</b><p>Navigation target recorded.</p></div></div>';
+  };
+  $("go-"+w.id).onclick=load;$("home-"+w.id).onclick=()=>{url.value="nexus://home";load()};$("back-"+w.id).onclick=()=>{url.value="nexus://home";load()};url.addEventListener("keydown",e=>{if(e.key==="Enter")load()});load();
+}
 
-    // Μενού Έναρξης (SYS.START)
-    const startMenu = document.createElement('div');
-    startMenu.id = 'start-menu';
-    startMenu.className = 'absolute bottom-[40px] left-0 w-64 bg-[rgba(10,12,20,0.95)] border border-[rgba(0,240,255,0.4)] border-b-0 rounded-tr-lg hidden flex-col overflow-hidden z-[9500] backdrop-blur-md transition-all duration-200 opacity-0 transform translate-y-2';
-    startMenu.innerHTML = `
-        <div class="p-4 border-b border-[rgba(0,240,255,0.2)] flex items-center gap-3">
-            <div class="w-10 h-10 rounded bg-[#00f0ff] flex items-center justify-center text-black font-bold text-xl shadow-[0_0_10px_#00f0ff]">N</div>
-            <div>
-                <div class="font-bold text-white text-sm">OPERATOR</div>
-                <div class="text-[10px] text-[#00ff41] font-mono">SYS.ADMIN_LEVEL_9</div>
-            </div>
-        </div>
-        <div class="p-2 space-y-1">
-            <button class="w-full text-left px-4 py-2 hover:bg-[#00f0ff] hover:text-black transition-colors rounded text-sm text-gray-200" onclick="window.NexusWM.spawnWindow('terminal'); document.getElementById('start-btn').click();">Command Terminal</button>
-            <button class="w-full text-left px-4 py-2 hover:bg-[#00f0ff] hover:text-black transition-colors rounded text-sm text-gray-200" onclick="window.NexusWM.spawnWindow('monitor'); document.getElementById('start-btn').click();">Hardware Telemetry</button>
-            <button class="w-full text-left px-4 py-2 mt-2 text-[#ff003c] hover:bg-[#ff003c] hover:text-white transition-colors rounded text-sm border border-[#ff003c]/30" onclick="location.reload()">Reboot System</button>
-        </div>
-    `;
-    document.body.appendChild(startMenu);
+function renderMonitor(w){
+  w.body.innerHTML='<div class="dashboard"><div class="stat-grid"><div class="stat"><small>CPU</small><b id="cpu-'+w.id+'">--%</b><div class="bar"><i></i></div></div><div class="stat"><small>MEMORY</small><b id="ram-'+w.id+'">--%</b><div class="bar"><i></i></div></div><div class="stat"><small>NETWORK</small><b id="net-'+w.id+'">ONLINE</b></div><div class="stat"><small>PROCESSES</small><b>42</b></div></div><div class="panel"><h3>LIVE PROCESS TABLE</h3><div class="process"><b>nexus-shell</b><span>2.1%</span><span>84 MB</span></div><div class="process"><b>firestore-sync</b><span>0.8%</span><span>52 MB</span></div><div class="process"><b>desktop-compositor</b><span>1.4%</span><span>126 MB</span></div><div class="process"><b>nexus-ai</b><span>4.2%</span><span>310 MB</span></div></div><div class="panel"><h3>TELEMETRY</h3><div id="telemetry-'+w.id+'" class="mono" style="font-size:10px;color:#94a3b8;line-height:1.8"></div></div></div>';
+  const tick=()=>{if(!document.body.contains(w.el))return;const cpu=Math.round(8+Math.random()*42),ram=Math.round(34+Math.random()*18);$("cpu-"+w.id).textContent=cpu+"%";$("ram-"+w.id).textContent=ram+"%";$("cpu-"+w.id).nextElementSibling.querySelector("i").style.width=cpu+"%";$("ram-"+w.id).nextElementSibling.querySelector("i").style.width=ram+"%";$("telemetry-"+w.id).textContent="uptime "+Math.floor(performance.now()/1000)+"s\\n"+new Date().toISOString()+"\\npackets rx "+Math.floor(1000+Math.random()*9000)+"\\npackets tx "+Math.floor(800+Math.random()*7000);setTimeout(tick,1200)};tick();
+}
 
-    const startBtn = document.getElementById('start-btn');
-    startBtn.onclick = () => {
-        const isHidden = startMenu.classList.contains('hidden');
-        if (isHidden) {
-            startMenu.classList.remove('hidden');
-            setTimeout(() => {
-                startMenu.classList.remove('opacity-0', 'translate-y-2');
-                startMenu.classList.add('opacity-100', 'translate-y-0');
-            }, 10);
-            startBtn.classList.add('bg-[#00f0ff]', 'text-black');
-        } else {
-            startMenu.classList.remove('opacity-100', 'translate-y-0');
-            startMenu.classList.add('opacity-0', 'translate-y-2');
-            setTimeout(() => startMenu.classList.add('hidden'), 200);
-            startBtn.classList.remove('bg-[#00f0ff]', 'text-black');
-        }
-    };
+function renderSecurity(w){
+  w.body.innerHTML='<div class="security-grid"><div class="security-card"><small>FIREWALL</small><p class="good">ACTIVE</p><b>0</b><div>blocked events</div></div><div class="security-card"><small>ENCRYPTION</small><p class="good">ENABLED</p><b>AES-256</b><div>virtual volume</div></div><div class="security-card"><small>IDENTITY</small><p class="good">SESSION PROTECTED</p><b>'+esc(state.user)+'</b><div>anonymous Firebase identity</div></div><div class="security-card"><small>THREAT SCAN</small><p id="scan-state" class="good">READY</p><b id="scan-count">0</b><div>issues detected</div><button class="tool-btn" id="scan-btn" style="margin-top:12px">Run scan</button></div><div class="security-card" style="grid-column:1/-1"><small>EVENT LOG</small><div class="mono" style="font-size:10px;line-height:1.8;color:#94a3b8">[OK] Secure shell loaded<br>[OK] Realtime transport available<br>[OK] Browser sandbox active<br>[OK] No host OS access exposed</div></div></div>';
+  $("scan-btn").onclick=async()=>{$("scan-state").textContent="SCANNING...";$("scan-state").className="warn";await sleep(900);$("scan-state").textContent="CLEAN";$("scan-state").className="good";$("scan-count").textContent="0";toast("Security scan","No simulated threats detected.")};
+}
 
-    // Ρολόι
-    setInterval(() => {
-        document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString('en-US', {hour12: false}) + ' UTC';
-    }, 1000);
-};
+function renderChat(w){
+  w.body.innerHTML='<div class="chat-layout"><aside class="chat-side"><h3>Online users</h3><div id="online-'+w.id+'"></div><hr style="border-color:var(--line);margin:15px 0"><small style="color:#64748b">Terminal:</small><p style="font:9px JetBrains Mono;color:#94a3b8">who<br>msg user hello<br>broadcast hello</p></aside><div class="chat-main"><div id="messages-'+w.id+'" class="chat-messages"></div><div class="chat-input"><input id="chat-input-'+w.id+'" placeholder="Message everyone..."><button class="primary-btn" id="chat-send-'+w.id+'">Send</button></div></div></div>';
+  const input=$("chat-input-"+w.id),send=()=>{const v=input.value.trim();if(v){sendChat(v,"global");input.value=""}};$("chat-send-"+w.id).onclick=send;input.addEventListener("keydown",e=>{if(e.key==="Enter")send()});subscribeChat(w);
+}
+async function subscribeChat(w){
+  const renderMsgs=(msgs)=>{
+    const box=$("messages-"+w.id);if(!box)return;box.innerHTML="";
+    msgs.slice(-80).forEach(m=>{const d=document.createElement("div");d.className="message";d.innerHTML='<div class="message-head">'+esc(m.user||"unknown")+" • "+esc(m.time||"")+(m.to&&m.to!=="global"?' • → '+esc(m.to):"")+'</div><div class="message-body">'+esc(m.text||"")+"</div>";box.appendChild(d)});box.scrollTop=box.scrollHeight;
+  };
+  if(state.chatReady&&db){
+    const q=query(collection(db,"nexus_messages"),orderBy("createdAt","asc"),limit(100));
+    if(state.chatUnsub)state.chatUnsub();
+    state.chatUnsub=onSnapshot(q,s=>{state.history=s.docs.map(d=>d.data());renderMsgs(state.history)});
+  }else{
+    const renderLocal=()=>renderMsgs(JSON.parse(localStorage.getItem("nexus_chat")||"[]"));renderLocal();if(localChatTimer)clearInterval(localChatTimer);localChatTimer=setInterval(renderLocal,1000);
+  }
+  updateOnline(w);
+}
+function updateOnline(w){
+  const el=$("online-"+w.id);if(!el)return;const users=[...new Set([state.user,...state.onlineUsers.keys()])];el.innerHTML=users.map(u=>'<div class="user-row online">'+esc(u)+'</div>').join("");
+}
+async function initFirebase(){
+  try{
+    const app=initializeApp(FIREBASE_CONFIG);db=getFirestore(app);auth=getAuth(app);
+    await signInAnonymously(auth);state.chatReady=true;$("net-label").textContent="FIREBASE ONLINE";toast("Comms connected","Realtime terminal chat is available.");
+  }catch(e){state.chatReady=false;$("net-label").textContent="LOCAL MODE";toast("Realtime unavailable","Chat is using local fallback until Firebase rules/auth are available.","warn")}
+}
+async function listUsers(){return "Online now: "+state.user+"\\nRealtime user discovery is enabled inside Comms when Firebase presence is configured."}
+async function sendChat(text,to="global"){
+  const msg={user:state.user,text,to,time:now(),createdAt:serverTimestamp()};
+  if(state.chatReady&&db){try{await addDoc(collection(db,"nexus_messages"),msg);return "sent"}catch(e){toast("Message failed","Firestore rejected the message. Check security rules.","warn");return "Error: message could not be sent"}}
+  const arr=JSON.parse(localStorage.getItem("nexus_chat")||"[]");arr.push({...msg,createdAt:Date.now()});localStorage.setItem("nexus_chat",JSON.stringify(arr.slice(-100)));return "sent locally";
+}
+async function sendDirect(user,text){
+  if(user===state.user)return "Error: choose another user";
+  return await sendChat(text,user);
+}
 
-// --- 2. BOOT SEQUENCE & AUTHENTICATION ---
-const initBootSequence = () => {
-    const authScreen = document.getElementById('auth-screen');
-    const authForm = document.getElementById('auth-form');
-    const authPwd = document.getElementById('auth-pwd');
-    const bootLog = document.getElementById('boot-log');
+function renderAI(w){
+  w.body.innerHTML='<div class="ai-wrap"><div id="ai-msgs-'+w.id+'" class="ai-msgs"><div class="ai-bubble ai">Nexus AI ready. I can explain commands, inspect the virtual workspace and help you navigate NexusOS.</div></div><div class="ai-input"><input id="ai-input-'+w.id+'" placeholder="Ask Nexus AI..."><button class="primary-btn" id="ai-send-'+w.id+'">Send</button></div><small style="color:#64748b">Local demo mode — no external AI API key is embedded.</small></div>';
+  const input=$("ai-input-"+w.id),box=$("ai-msgs-"+w.id),send=()=>{
+    const q=input.value.trim();if(!q)return;box.innerHTML+='<div class="ai-bubble user">'+esc(q)+'</div>';input.value="";
+    let a="I can help with NexusOS. Try asking about the terminal, files, security, realtime chat, or available commands.";
+    if(/terminal|command/i.test(q))a="Use help for all commands. For user-to-user messaging: msg USER MESSAGE, or broadcast MESSAGE.";
+    if(/firebase|chat/i.test(q))a="Nexus Comms uses Firebase Firestore when the project allows anonymous access. If rules reject writes, the UI falls back to local demo mode.";
+    if(/file/i.test(q))a="The File Manager uses a virtual filesystem stored in memory. Open a file to edit it, then Save.";
+    box.innerHTML+='<div class="ai-bubble ai">'+esc(a)+'</div>';box.scrollTop=box.scrollHeight;
+  };$("ai-send-"+w.id).onclick=send;input.addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+}
+function renderSettings(w){
+  w.body.innerHTML='<div class="settings-grid"><div class="setting-row"><div><b>Animations</b><small>Enable interface motion</small></div><button class="toggle on" id="anim-'+w.id+'"></button></div><div class="setting-row"><div><b>Accent</b><small>Choose Nexus highlight color</small></div><select class="select-btn" id="accent-'+w.id+'"><option value="#38bdf8">Cyan</option><option value="#a78bfa">Violet</option><option value="#34d399">Emerald</option><option value="#fb7185">Rose</option></select></div><div class="setting-row"><div><b>Wallpaper</b><small>Desktop visual mode</small></div><button class="tool-btn" id="wall-'+w.id+'">Grid / Aurora</button></div><div class="setting-row"><div><b>Session</b><small>'+esc(state.user)+' is signed in</small></div><button class="tool-btn" id="logout2-'+w.id+'">Log out</button></div></div>';
+  $("accent-"+w.id).onchange=e=>{document.documentElement.style.setProperty("--accent",e.target.value);state.settings.accent=e.target.value};
+  $("anim-"+w.id).onclick=e=>{e.currentTarget.classList.toggle("on");state.settings.animations=!state.settings.animations;document.body.style.setProperty("--motion",state.settings.animations?"1":"0")};
+  $("wall-"+w.id).onclick=()=>{$("wallpaper").classList.toggle("alt-wall")};
+  $("logout2-"+w.id).onclick=logout;
+}
+function renderCompany(w){
+  w.body.innerHTML='<div class="browser-page"><div class="hero"><h1>Nexus<span>Code</span></h1><p>Professional software, AI and cybersecurity experiences.</p></div><div class="cards"><div class="card"><h3>Software</h3><p>Modern web apps, desktop experiences and automation.</p></div><div class="card"><h3>AI</h3><p>Agents, local models and intelligent workflows.</p></div><div class="card"><h3>Cybersecurity</h3><p>Secure architecture, monitoring and defensive tooling.</p></div></div></div>';
+}
 
-    // Matrix Background Animation
-    const c = document.getElementById('matrix-bg');
-    const ctx = c.getContext('2d');
-    c.width = window.innerWidth; 
-    c.height = window.innerHeight;
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$+-*/=%\"'#&_(),.;:?!\\|{}<>[]^~".split('');
-    const drops = Array(Math.floor(c.width / 14)).fill(1);
-    
-    setInterval(() => {
-        ctx.fillStyle = "rgba(5, 5, 10, 0.05)";
-        ctx.fillRect(0, 0, c.width, c.height);
-        ctx.fillStyle = "#00ff41"; 
-        ctx.font = "14px monospace";
-        for(let i = 0; i < drops.length; i++) {
-            const text = chars[Math.floor(Math.random() * chars.length)];
-            ctx.fillText(text, i * 14, drops[i] * 14);
-            if(drops[i] * 14 > c.height && Math.random() > 0.975) drops[i] = 0;
-            drops[i]++;
-        }
-    }, 33);
+function renderRunner(w){
+  w.body.innerHTML='<div class="runner"><div class="runner-score">SCORE <span id="score-'+w.id+'">0</span></div><canvas class="runner-canvas" id="canvas-'+w.id+'" width="520" height="260"></canvas><div class="runner-controls">SPACE / CLICK to jump • R to restart</div></div>';
+  const c=$("canvas-"+w.id),ctx=c.getContext("2d"),scoreEl=$("score-"+w.id);let score=0,running=true,player={x:70,y:205,vy:0},obstacles=[{x:520,h:38}];
+  const jump=()=>{if(player.y>=205)player.vy=-10};window.addEventListener("keydown",e=>{if(e.code==="Space")jump();if(e.key.toLowerCase()==="r"){score=0;obstacles=[{x:520,h:38}];running=true}});
+  c.addEventListener("click",jump);
+  const loop=()=>{if(!document.body.contains(w.el))return;ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle="#07101e";ctx.fillRect(0,0,c.width,c.height);ctx.fillStyle="#38bdf8";ctx.fillRect(player.x,player.y,24,24);player.vy+=.45;player.y+=player.vy;if(player.y>205)player.y=205;
+    obstacles.forEach(o=>{o.x-=4;ctx.fillStyle="#a78bfa";ctx.fillRect(o.x,205-o.h,24,o.h);if(o.x<-30){o.x=540+Math.random()*140;o.h=25+Math.random()*45;score++;scoreEl.textContent=score}
+    if(o.x<player.x+24&&o.x+24>player.x&&player.y+24>205-o.h)running=false});
+    if(!running){ctx.fillStyle="#fff";ctx.font="700 20px Inter";ctx.fillText("GAME OVER — press R",155,120)}else requestAnimationFrame(loop)};loop();
+}
 
-    // Boot Text Animation
-    const lines = [
-        'BIOS Date 09/19/2026 13:08:11 Ver 4.00',
-        'CPU: Quantum Core x128 @ 4.2THz',
-        'Memory Testing: 65536 OK',
-        'Loading Kernel Modules............ OK',
-        'Mounting VFS (Virtual File System) OK',
-        'Initializing Cloud Connectors..... OK',
-        'Awaiting Operator Input...'
-    ];
-    
-    let i = 0;
-    const bootInterval = setInterval(() => {
-        if (i < lines.length) {
-            bootLog.innerHTML += `<div>[${(i * 0.14).toFixed(3)}] ${lines[i]}</div>`;
-            bootLog.scrollTop = bootLog.scrollHeight;
-            i++;
-        } else {
-            clearInterval(bootInterval);
-        }
-    }, 300);
-
-    // Έλεγχος Κωδικού Πρόσβασης
-    authForm.onsubmit = (e) => {
-        e.preventDefault();
-        // Κωδικός πρόσβασης: 2945
-        if (btoa(authPwd.value.trim()) === 'Mjk0NQ==') {
-            authScreen.style.opacity = '0';
-            document.getElementById('net-status').innerHTML = `<span class="w-2 h-2 rounded-full animate-pulse bg-[#00ff41]"></span> UPLINK ACTIVE`;
-            document.getElementById('net-status').classList.replace('text-yellow-400', 'text-[#00ff41]');
-            
-            setTimeout(() => {
-                authScreen.remove();
-                // Αυτόματο άνοιγμα του τερματικού μετά το boot
-                window.NexusWM.spawnWindow('terminal');
-            }, 1000);
-        } else {
-            authPwd.value = '';
-            authScreen.classList.add('bg-red-900/40');
-            setTimeout(() => authScreen.classList.remove('bg-red-900/40'), 200);
-        }
-    };
-};
-
-// Εκτέλεση μόλις φορτώσει το DOM
-document.addEventListener('DOMContentLoaded', () => {
-    initDesktop();
-    initBootSequence();
-});
-// ==============================================================================
-// NEXUS_OS KERNEL - PART 4: VFS EXPLORER & TEXT EDITOR
-// ==============================================================================
-
-// --- 1. GUI FILE EXPLORER ---
-window.NexusWM.registerApp('explorer', {
-    title: 'SYS.FILES - File Manager',
-    width: 600,
-    height: 400,
-    render: (winId, container) => {
-        container.innerHTML = `
-            <div class="flex flex-col h-full bg-[#05050a] font-mono text-[13px] select-none">
-                <!-- Address Bar -->
-                <div class="flex items-center gap-2 p-2 bg-black border-b border-[rgba(0,240,255,0.3)]">
-                    <button id="exp-up-${winId}" class="px-2 py-1 bg-[rgba(0,240,255,0.1)] hover:bg-[#00f0ff] hover:text-black transition-colors text-[#00f0ff] border border-[rgba(0,240,255,0.3)]" title="Up Directory">↑ UP</button>
-                    <input type="text" id="exp-path-${winId}" class="flex-1 bg-transparent border border-[rgba(0,240,255,0.3)] text-white px-2 py-1 outline-none focus:border-[#00ff41]" value="/home/operator" readonly>
-                </div>
-                <!-- File Grid -->
-                <div id="exp-grid-${winId}" class="flex-1 overflow-y-auto p-4 grid grid-cols-4 md:grid-cols-5 gap-4 content-start">
-                    <!-- Files injected by JS -->
-                </div>
-                <!-- Status Bar -->
-                <div id="exp-status-${winId}" class="p-1 px-3 bg-black border-t border-[rgba(0,240,255,0.3)] text-gray-500 text-[11px]">
-                    Ready.
-                </div>
-            </div>
-        `;
-
-        const pathInput = document.getElementById(`exp-path-${winId}`);
-        const grid = document.getElementById(`exp-grid-${winId}`);
-        const upBtn = document.getElementById(`exp-up-${winId}`);
-        const status = document.getElementById(`exp-status-${winId}`);
-        let currentPath = '/home/operator';
-
-        const renderGrid = (path) => {
-            const node = window.NexusVFS.getNode(path);
-            if (!node || node.type !== 'dir') {
-                status.textContent = `ERR: Path '${path}' is invalid.`;
-                return;
-            }
-            currentPath = path;
-            pathInput.value = currentPath;
-            grid.innerHTML = '';
-            
-            const entries = Object.keys(node.children);
-            status.textContent = `${entries.length} object(s) found.`;
-
-            if (entries.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center text-gray-600 mt-10">Directory is empty.</div>`;
-                return;
-            }
-
-            entries.forEach(name => {
-                const item = node.children[name];
-                const isDir = item.type === 'dir';
-                const icon = isDir 
-                    ? `<svg class="w-10 h-10 text-[#00f0ff]" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>`
-                    : `<svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
-
-                const el = document.createElement('div');
-                el.className = 'flex flex-col items-center justify-center cursor-pointer hover:bg-[rgba(0,240,255,0.1)] p-2 rounded transition-colors group';
-                el.innerHTML = `${icon}<span class="text-white text-xs mt-2 truncate w-full text-center group-hover:text-[#00f0ff]">${name}</span>`;
-                
-                // Double click action
-                el.ondblclick = () => {
-                    const newPath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`;
-                    if (isDir) {
-                        renderGrid(newPath);
-                    } else {
-                        // Άνοιγμα του Text Editor με το αρχείο
-                        window.NexusWM.spawnWindow('editor', { path: newPath, name: name });
-                    }
-                };
-                grid.appendChild(el);
-            });
-        };
-
-        upBtn.onclick = () => {
-            if (currentPath === '/') return;
-            const parts = currentPath.split('/').filter(Boolean);
-            parts.pop();
-            renderGrid('/' + parts.join('/'));
-        };
-
-        // Αρχικό Render
-        renderGrid(currentPath);
-    }
-});
-
-// --- 2. TEXT EDITOR APP ---
-window.NexusWM.registerApp('editor', {
-    title: 'NEXUS.EDIT',
-    width: 550,
-    height: 450,
-    render: (winId, container, args) => {
-        const filePath = args?.path || null;
-        let fileNode = null;
-        let initialContent = '';
-
-        if (filePath) {
-            fileNode = window.NexusVFS.getNode(filePath);
-            if (fileNode && fileNode.type === 'file') {
-                initialContent = fileNode.content;
-            }
-        }
-
-        container.innerHTML = `
-            <div class="flex flex-col h-full bg-[#05050a] font-mono text-[13px]">
-                <!-- Toolbar -->
-                <div class="flex items-center gap-2 p-2 bg-black border-b border-[rgba(0,240,255,0.3)]">
-                    <button id="edit-save-${winId}" class="px-3 py-1 bg-[#00f0ff] text-black font-bold hover:bg-white transition-colors text-xs">SAVE</button>
-                    <span class="text-gray-500 text-xs flex-1 truncate" id="edit-path-${winId}">${filePath || 'Untitled.txt'}</span>
-                    <span class="text-[#00ff41] text-[10px] hidden" id="edit-status-${winId}">SAVED ✔</span>
-                </div>
-                <!-- Text Area -->
-                <textarea id="edit-area-${winId}" class="flex-1 bg-transparent text-gray-300 p-4 outline-none resize-none font-mono text-[14px] leading-relaxed selection:bg-[#00f0ff] selection:text-black" spellcheck="false">${initialContent}</textarea>
-            </div>
-        `;
-
-        const saveBtn = document.getElementById(`edit-save-${winId}`);
-        const area = document.getElementById(`edit-area-${winId}`);
-        const status = document.getElementById(`edit-status-${winId}`);
-        const pathDisplay = document.getElementById(`edit-path-${winId}`);
-
-        saveBtn.onclick = () => {
-            const newContent = area.value;
-            let targetPath = filePath;
-
-            // Αν είναι νέο αρχείο που δεν έχει σωθεί
-            if (!targetPath) {
-                const fileName = prompt("Enter filename (e.g. script.js):", "new_file.txt");
-                if (!fileName) return;
-                targetPath = `/home/operator/${fileName}`;
-                pathDisplay.textContent = targetPath;
-            }
-
-            try {
-                window.NexusVFS.writeFile(targetPath, newContent, true); // True = overwrite
-                status.classList.remove('hidden');
-                setTimeout(() => status.classList.add('hidden'), 2000);
-            } catch (e) {
-                alert("Error saving file: " + e.message);
-            }
-        };
-    }
-});
-
-// Προσθήκη εικονιδίων στην επιφάνεια εργασίας (Δυναμικά)
-setTimeout(() => {
-    const desktopGrid = document.querySelector('.icon-grid') || document.getElementById('desktop').firstElementChild;
-    if (desktopGrid) {
-        // Εικονίδιο Explorer
-        const expBtn = document.createElement('div');
-        expBtn.className = 'flex flex-col items-center justify-center cursor-pointer group';
-        expBtn.onclick = () => window.NexusWM.spawnWindow('explorer');
-        expBtn.innerHTML = `
-            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
-                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-            </div>
-            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">SysFiles</span>
-        `;
-        
-        // Εικονίδιο Editor
-        const edBtn = document.createElement('div');
-        edBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
-        edBtn.onclick = () => window.NexusWM.spawnWindow('editor');
-        edBtn.innerHTML = `
-            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
-                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-            </div>
-            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">NexusEdit</span>
-        `;
-        
-        desktopGrid.appendChild(expBtn);
-        desktopGrid.appendChild(edBtn);
-    }
-}, 500); // Περιμένουμε μισό δευτερόλεπτο να χτιστεί το DOM από το Μέρος 3
-// ==============================================================================
-// NEXUS_OS KERNEL - PART 6: FILE MANAGER & TERMINAL
-// ==============================================================================
-
-// --- 3. NEXUS FILE MANAGER APP ---
-window.NexusWM.registerApp('files', {
-    title: 'NEXUS.FS - File Matrix',
-    width: 600,
-    height: 420,
-    render: (winId, container) => {
-        container.innerHTML = `
-            <div class="h-full bg-[#05050a] text-white font-mono text-[13px] flex flex-col">
-                <div class="p-3 border-b border-[rgba(0,240,255,0.3)] flex justify-between items-center">
-                    <span class="text-[#00f0ff] font-bold">ROOT://</span>
-                    <button id="refresh-${winId}" class="px-2 py-1 bg-[#00f0ff] text-black text-xs font-bold hover:bg-white transition">REFRESH</button>
-                </div>
-
-                <div id="file-list-${winId}" class="flex-1 overflow-y-auto p-3 space-y-2">
-                    <!-- Files will be injected dynamically -->
-                </div>
-            </div>
-        `;
-
-        const fileList = document.getElementById(`file-list-${winId}`);
-        const refreshBtn = document.getElementById(`refresh-${winId}`);
-
-        const mockFiles = [
-            { name: 'system.cfg', type: 'config' },
-            { name: 'kernel.log', type: 'log' },
-            { name: 'user-data.json', type: 'data' },
-            { name: 'boot.seq', type: 'exec' },
-            { name: 'readme.txt', type: 'text' }
-        ];
-
-        const renderFiles = () => {
-            fileList.innerHTML = '';
-            mockFiles.forEach(f => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center justify-between bg-black/40 px-3 py-2 rounded border border-[rgba(0,240,255,0.2)] hover:border-[#00f0ff] transition cursor-pointer';
-                row.innerHTML = `
-                    <span>${f.name}</span>
-                    <span class="text-gray-400 text-xs">${f.type.toUpperCase()}</span>
-                `;
-                row.onclick = () => alert(`Opening ${f.name}...`);
-                fileList.appendChild(row);
-            });
-        };
-
-        refreshBtn.onclick = renderFiles;
-        renderFiles();
-    }
-});
-
-// --- 4. NEXUS TERMINAL APP ---
-window.NexusWM.registerApp('terminal', {
-    title: 'NEXUS.TERMINAL - Quantum Shell',
-    width: 640,
-    height: 380,
-    render: (winId, container) => {
-        container.innerHTML = `
-            <div class="h-full bg-black text-[#00f0ff] font-mono text-[13px] flex flex-col">
-                <div class="p-2 border-b border-[rgba(0,240,255,0.3)]">
-                    <span class="text-[#00ff41]">QuantumShell v3.2</span>
-                </div>
-
-                <div id="term-output-${winId}" class="flex-1 p-3 overflow-y-auto"></div>
-
-                <form id="term-form-${winId}" class="p-2 flex gap-2 border-t border-[rgba(0,240,255,0.3)]">
-                    <span class="text-[#00f0ff]">></span>
-                    <input id="term-input-${winId}" type="text" class="flex-1 bg-transparent outline-none text-white" autocomplete="off">
-                </form>
-            </div>
-        `;
-
-        const output = document.getElementById(`term-output-${winId}`);
-        const form = document.getElementById(`term-form-${winId}`);
-        const input = document.getElementById(`term-input-${winId}`);
-
-        const print = (msg) => {
-            const line = document.createElement('div');
-            line.textContent = msg;
-            output.appendChild(line);
-            output.scrollTop = output.scrollHeight;
-        };
-
-        print("Welcome to QuantumShell. Type 'help' for commands.");
-
-        form.onsubmit = (e) => {
-            e.preventDefault();
-            const cmd = input.value.trim();
-            input.value = '';
-
-            print("> " + cmd);
-
-            switch (cmd) {
-                case 'help':
-                    print("Available commands:");
-                    print("help - Show this menu");
-                    print("sysinfo - Display system information");
-                    print("clear - Clear terminal");
-                    break;
-
-                case 'sysinfo':
-                    print("NexusOS Kernel v4.0.5");
-                    print("Status: STABLE");
-                    print("UI Accent: " + getComputedStyle(document.documentElement).getPropertyValue('--sys-accent'));
-                    break;
-
-                case 'clear':
-                    output.innerHTML = '';
-                    break;
-
-                default:
-                    print("Unknown command: " + cmd);
-            }
-        };
-    }
-});
-
-// --- 5. Desktop Icons for File Manager & Terminal ---
-setTimeout(() => {
-    const desktopGrid = document.querySelector('.icon-grid') || document.getElementById('desktop').firstElementChild;
-    if (desktopGrid) {
-
-        // File Manager Icon
-        const fileBtn = document.createElement('div');
-        fileBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
-        fileBtn.onclick = () => window.NexusWM.spawnWindow('files');
-        fileBtn.innerHTML = `
-            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
-                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7h18M3 12h18M3 17h18"></path>
-                </svg>
-            </div>
-            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">Files</span>
-        `;
-
-        // Terminal Icon
-        const termBtn = document.createElement('div');
-        termBtn.className = 'flex flex-col items-center justify-center cursor-pointer group mt-4';
-        termBtn.onclick = () => window.NexusWM.spawnWindow('terminal');
-        termBtn.innerHTML = `
-            <div class="w-12 h-12 bg-[rgba(0,240,255,0.05)] border border-[rgba(0,240,255,0.2)] rounded-lg flex items-center justify-center group-hover:bg-[rgba(0,240,255,0.2)] group-hover:border-[#00f0ff] transition-all">
-                <svg class="w-6 h-6 text-[#00f0ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 9l3 3-3 3m5 0h3"></path>
-                </svg>
-            </div>
-            <span class="text-white text-xs font-mono mt-2 bg-black/50 px-1 rounded drop-shadow-md">Terminal</span>
-        `;
-
-        desktopGrid.appendChild(fileBtn);
-        desktopGrid.appendChild(termBtn);
-    }
-}, 600);
+$("auth-form").addEventListener("submit",login);
+$("start-btn").onclick=()=>{$("start-menu").classList.toggle("hidden");buildStart()};
+$("app-search").addEventListener("input",e=>buildStart(e.target.value));
+$("logout-btn").onclick=logout;
+document.querySelectorAll(".desktop-icon").forEach(b=>b.addEventListener("dblclick",()=>openApp(b.dataset.app)));
+document.querySelectorAll(".desktop-icon").forEach(b=>b.addEventListener("click",()=>{clearTimeout(b._click);b._click=setTimeout(()=>openApp(b.dataset.app),220)}));
+window.addEventListener("online",()=>{$("net-dot").style.background="var(--good)";$("net-label").textContent="ONLINE"});
+window.addEventListener("offline",()=>{$("net-dot").style.background="var(--danger)";$("net-label").textContent="OFFLINE"});
+boot();
