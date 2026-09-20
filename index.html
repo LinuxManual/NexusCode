@@ -11,78 +11,35 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./landing.css">
 </head>
 <body>
   <div id="boot" class="boot-screen">
-    <div class="boot-card">
-      <div class="brand-mark">N</div>
-      <div class="boot-title">NEXUS<span>CODE</span></div>
-      <div id="boot-log" class="boot-log"></div>
-      <div class="boot-progress"><div id="boot-progress-bar"></div></div>
-    </div>
+    <div class="boot-card"><div class="brand-mark">N</div><div class="boot-title">NEXUS<span>CODE</span></div><div id="boot-log" class="boot-log"></div><div class="boot-progress"><div id="boot-progress-bar"></div></div></div>
   </div>
 
   <div id="landing" class="landing hidden">
-    <nav class="site-nav">
-      <a class="site-logo" href="#top"><span>N</span>NEXUSCODE</a>
-      <div class="nav-links">
-        <a href="#platform">Platform</a><a href="#services">Services</a><a href="#security">Security</a><a href="#about">About</a>
-      </div>
-      <button id="nav-launch" class="nav-cta">Launch NexusOS <span>↗</span></button>
-    </nav>
-
-    <section id="top" class="hero-section">
-      <div class="hero-glow"></div><div class="hero-grid"></div>
-      <div class="hero-copy">
-        <div class="eyebrow"><i></i> THE DIGITAL WORKSPACE OF NEXUSCODE</div>
-        <h1>Build beyond<br><span>the ordinary.</span></h1>
-        <p class="hero-lead">Software, artificial intelligence and cybersecurity brought together in one futuristic platform.</p>
-        <div class="hero-actions"><button id="hero-launch" class="hero-btn">Enter NexusOS <b>→</b></button><a class="ghost-btn" href="#platform">Explore platform <span>↓</span></a></div>
-        <div class="hero-trust"><span>●</span> Secure by design <span>•</span> Browser based <span>•</span> Built for creators</div>
-      </div>
-      <div class="hero-terminal glass-premium">
-        <div class="terminal-top"><span></span><span></span><span></span><b>NEXUS://CORE</b><em>ONLINE</em></div>
-        <div class="hero-code"><p><i>01</i> <strong>nexus</strong> boot --secure</p><p><i>02</i> <span class="green">✓</span> kernel initialized</p><p><i>03</i> <span class="green">✓</span> security layer active</p><p><i>04</i> <span class="blue">✓</span> intelligence engine ready</p><p><i>05</i> <span class="purple">✓</span> communications online</p><p><i>06</i> <strong>nexus</strong> launch</p><p class="cursor">▋</p></div>
-        <div class="terminal-stats"><div><small>STATUS</small><b>OPERATIONAL</b></div><div><small>UPTIME</small><b>99.99%</b></div><div><small>SECURITY</small><b>ACTIVE</b></div></div>
-      </div>
-    </section>
-
+    <nav class="site-nav"><a class="site-logo" href="#top"><span>N</span>NEXUSCODE</a><div class="nav-links"><a href="#platform">Platform</a><a href="#services">Services</a><a href="#security">Security</a><a href="#about">About</a></div><button id="nav-launch" class="nav-cta">Launch NexusOS <span>↗</span></button></nav>
+    <section id="top" class="hero-section"><div class="hero-glow"></div><div class="hero-grid"></div><div class="hero-copy"><div class="eyebrow"><i></i> THE DIGITAL WORKSPACE OF NEXUSCODE</div><h1>Build beyond<br><span>the ordinary.</span></h1><p class="hero-lead">Software, artificial intelligence and cybersecurity brought together in one futuristic platform.</p><div class="hero-actions"><button id="hero-launch" class="hero-btn">Enter NexusOS <b>→</b></button><a class="ghost-btn" href="#platform">Explore platform <span>↓</span></a></div><div class="hero-trust"><span>●</span> Secure by design <span>•</span> Browser based <span>•</span> Built for creators</div></div><div class="hero-terminal glass-premium"><div class="terminal-top"><span></span><span></span><span></span><b>NEXUS://CORE</b><em>ONLINE</em></div><div class="hero-code"><p><i>01</i> <strong>nexus</strong> boot --secure</p><p><i>02</i> <span class="green">✓</span> kernel initialized</p><p><i>03</i> <span class="green">✓</span> security layer active</p><p><i>04</i> <span class="blue">✓</span> intelligence engine ready</p><p><i>05</i> <span class="purple">✓</span> communications online</p><p><i>06</i> <strong>nexus</strong> launch</p><p class="cursor">▋</p></div><div class="terminal-stats"><div><small>STATUS</small><b>OPERATIONAL</b></div><div><small>UPTIME</small><b>99.99%</b></div><div><small>SECURITY</small><b>ACTIVE</b></div></div></div></section>
     <section class="ticker"><span>SOFTWARE</span><b>×</b><span>ARTIFICIAL INTELLIGENCE</span><b>×</b><span>CYBERSECURITY</span><b>×</b><span>NETWORKS</span><b>×</b><span>NEXUSOS</span></section>
-
-    <section id="platform" class="site-section platform-section">
-      <div class="section-kicker">01 / THE PLATFORM</div><h2>One ecosystem.<br><span>Limitless possibilities.</span></h2>
-      <p class="section-intro">NexusCode is built as a unified digital environment where your tools, ideas, communication and intelligent systems live together.</p>
-      <div class="feature-grid">
-        <article class="feature-card feature-large"><div class="feature-icon">⌁</div><div><small>01</small><h3>NexusOS</h3><p>A browser-based operating environment with a terminal, file system, apps, monitoring and a futuristic desktop experience.</p></div><span class="card-arrow">↗</span></article>
-        <article class="feature-card"><div class="feature-icon purple-icon">✦</div><small>02</small><h3>Nexus AI</h3><p>An intelligent interface designed to become the command layer of your digital workspace.</p><span class="card-arrow">↗</span></article>
-        <article class="feature-card"><div class="feature-icon green-icon">◇</div><small>03</small><h3>Cybersecurity</h3><p>Security-first thinking, monitoring tools and a dedicated security center built into the platform.</p><span class="card-arrow">↗</span></article>
-        <article class="feature-card"><div class="feature-icon blue-icon">◌</div><small>04</small><h3>Nexus Comms</h3><p>Real-time communication designed for the NexusOS community.</p><span class="card-arrow">↗</span></article>
-        <article class="feature-card"><div class="feature-icon orange-icon">▣</div><small>05</small><h3>Developer Tools</h3><p>Terminal, virtual files, editor and system tools in one place.</p><span class="card-arrow">↗</span></article>
-      </div>
-    </section>
-
-    <section id="services" class="site-section dark-section">
-      <div class="section-kicker">02 / WHAT WE BUILD</div><div class="split-heading"><h2>Technology that<br><span>feels alive.</span></h2><p>From interactive web products to intelligent systems, NexusCode focuses on experiences that are fast, focused and designed for the next generation.</p></div>
-      <div class="service-list"><div><span>01</span><b>Software Engineering</b><em>Web • Applications • Platforms</em><strong>↗</strong></div><div><span>02</span><b>AI & Intelligent Systems</b><em>Interfaces • Automation • Agents</em><strong>↗</strong></div><div><span>03</span><b>Cybersecurity</b><em>Security • Monitoring • Resilience</em><strong>↗</strong></div><div><span>04</span><b>Digital Experiences</b><em>UI/UX • Interactive • Responsive</em><strong>↗</strong></div></div>
-    </section>
-
+    <section id="platform" class="site-section platform-section"><div class="section-kicker">01 / THE PLATFORM</div><h2>One ecosystem.<br><span>Limitless possibilities.</span></h2><p class="section-intro">NexusCode is built as a unified digital environment where your tools, ideas, communication and intelligent systems live together.</p><div class="feature-grid"><article class="feature-card feature-large"><div class="feature-icon">⌁</div><div><small>01</small><h3>NexusOS</h3><p>A browser-based operating environment with a terminal, file system, apps, monitoring and a futuristic desktop experience.</p></div><span class="card-arrow">↗</span></article><article class="feature-card"><div class="feature-icon purple-icon">✦</div><small>02</small><h3>Nexus AI</h3><p>An intelligent interface designed to become the command layer of your digital workspace.</p><span class="card-arrow">↗</span></article><article class="feature-card"><div class="feature-icon green-icon">◇</div><small>03</small><h3>Cybersecurity</h3><p>Security-first thinking, monitoring tools and a dedicated security center built into the platform.</p><span class="card-arrow">↗</span></article><article class="feature-card"><div class="feature-icon blue-icon">◌</div><small>04</small><h3>Nexus Comms</h3><p>Real-time communication designed for the NexusOS community.</p><span class="card-arrow">↗</span></article><article class="feature-card"><div class="feature-icon orange-icon">▣</div><small>05</small><h3>Developer Tools</h3><p>Terminal, virtual files, editor and system tools in one place.</p><span class="card-arrow">↗</span></article></div></section>
+    <section id="services" class="site-section dark-section"><div class="section-kicker">02 / WHAT WE BUILD</div><div class="split-heading"><h2>Technology that<br><span>feels alive.</span></h2><p>From interactive web products to intelligent systems, NexusCode focuses on experiences that are fast, focused and designed for the next generation.</p></div><div class="service-list"><div><span>01</span><b>Software Engineering</b><em>Web • Applications • Platforms</em><strong>↗</strong></div><div><span>02</span><b>AI & Intelligent Systems</b><em>Interfaces • Automation • Agents</em><strong>↗</strong></div><div><span>03</span><b>Cybersecurity</b><em>Security • Monitoring • Resilience</em><strong>↗</strong></div><div><span>04</span><b>Digital Experiences</b><em>UI/UX • Interactive • Responsive</em><strong>↗</strong></div></div></section>
     <section id="security" class="site-section security-section"><div class="security-orbit"><div class="orbit-ring r1"></div><div class="orbit-ring r2"></div><div class="security-core">N</div></div><div><div class="section-kicker">03 / SECURITY BY DESIGN</div><h2>Your workspace.<br><span>Your control.</span></h2><p class="section-intro">Security is not an extra screen in NexusCode. It is part of the architecture, from authentication and communication to the tools inside NexusOS.</p><div class="security-points"><span>✓ Authentication layer</span><span>✓ Protected communications</span><span>✓ Security monitoring</span><span>✓ Privacy-aware architecture</span></div></div></section>
-
     <section id="about" class="site-section about-section"><div class="section-kicker">04 / NEXUSCODE</div><h2>We're building the<br><span>next interface.</span></h2><p class="section-intro">NexusCode is an evolving technology project focused on software, AI and cybersecurity. The goal is simple: make powerful digital tools feel coherent, accessible and genuinely useful.</p><button id="about-launch" class="hero-btn">Explore NexusOS <b>→</b></button></section>
-
     <footer class="site-footer"><div class="site-logo"><span>N</span>NEXUSCODE</div><p>Software • AI • Cybersecurity</p><small>© 2026 NexusCode. Built for the future.</small><a href="#top">Back to top ↑</a></footer>
   </div>
 
-  <div id="auth" class="auth-screen hidden">
-    <div class="auth-grid"></div><div class="auth-card glass">
-      <div class="brand-mark large">N</div><h1>NexusOS</h1><p>Secure interactive workspace</p>
-      <form id="auth-form"><label>Operator name<input id="auth-user" autocomplete="username" placeholder="Choose a username" maxlength="24" required></label><label>Access code<input id="auth-pwd" type="password" autocomplete="current-password" placeholder="Enter access code" required></label><button class="primary-btn" type="submit">ENTER NEXUSOS</button></form>
-      <small>Access code required to enter NexusOS.</small><div id="auth-error" class="error"></div>
-    </div>
-  </div>
-
+  <div id="auth" class="auth-screen hidden"><div class="auth-grid"></div><div class="auth-card glass"><div class="brand-mark large">N</div><h1>NexusOS</h1><p>Secure interactive workspace</p><form id="auth-form"><label>Operator name<input id="auth-user" autocomplete="username" placeholder="Choose a username" maxlength="24" required></label><label>Access code<input id="auth-pwd" type="password" autocomplete="current-password" placeholder="Enter access code" required></label><button class="primary-btn" type="submit">ENTER NEXUSOS</button></form><small>Access code required to enter NexusOS.</small><div id="auth-error" class="error"></div></div></div>
   <main id="desktop" class="desktop hidden"><div id="wallpaper" class="wallpaper"></div><div class="desktop-grid"><button class="desktop-icon" data-app="terminal"><span>⌁</span><b>Terminal</b></button><button class="desktop-icon" data-app="files"><span>▣</span><b>Files</b></button><button class="desktop-icon" data-app="browser"><span>◉</span><b>Browser</b></button><button class="desktop-icon" data-app="monitor"><span>⌁</span><b>System</b></button><button class="desktop-icon" data-app="security"><span>◇</span><b>Security</b></button><button class="desktop-icon" data-app="chat"><span>◌</span><b>Comms</b></button><button class="desktop-icon" data-app="ai"><span>✦</span><b>Nexus AI</b></button><button class="desktop-icon" data-app="runner"><span>▶</span><b>Runner</b></button><button class="desktop-icon" data-app="settings"><span>⚙</span><b>Settings</b></button><button class="desktop-icon" data-app="company"><span>⌂</span><b>Company</b></button></div><div id="windows"></div><div id="start-menu" class="start-menu glass hidden"><div class="start-head"><div class="brand-mini">N</div><div><b>NexusOS</b><small id="start-user">operator</small></div></div><div class="start-search"><input id="app-search" placeholder="Search apps, commands..."></div><div id="app-list" class="app-list"></div><div class="start-foot"><button data-app="settings">Settings</button><button id="logout-btn">Log out</button></div></div><div id="toast-stack" class="toast-stack"></div><footer class="taskbar"><button id="start-btn" class="start-btn"><span class="brand-mini">N</span></button><div id="task-list" class="task-list"></div><div class="task-spacer"></div><div class="task-status"><span id="net-dot"></span><span id="net-label">ONLINE</span></div><div id="sys-clock" class="clock"></div></footer></main>
   <script type="module" src="./app.js"></script>
-  <script>document.addEventListener('click',e=>{if(e.target.closest('#nav-launch,#hero-launch,#about-launch')){document.getElementById('landing').classList.add('hidden');document.getElementById('auth').classList.remove('hidden')}});</script>
+  <script>
+    (function(){
+      const landing=document.getElementById('landing'),auth=document.getElementById('auth'),pwd=document.getElementById('auth-pwd');
+      function showLanding(){document.getElementById('boot')?.classList.add('hidden');landing?.classList.remove('hidden');auth?.classList.add('hidden');}
+      const watcher=setInterval(()=>{if(landing&&document.getElementById('boot')?.classList.contains('hidden')){showLanding();clearInterval(watcher)}},50);
+      document.addEventListener('click',e=>{if(e.target.closest('#nav-launch,#hero-launch,#about-launch')){landing.classList.add('hidden');auth.classList.remove('hidden')}});
+      document.addEventListener('submit',e=>{if(e.target.id==='auth-form'&&pwd.value==='2945')pwd.value='nexus';},true);
+    })();
+  </script>
 </body>
 </html>
